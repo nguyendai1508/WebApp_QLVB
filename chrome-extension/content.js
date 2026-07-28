@@ -241,9 +241,10 @@ window._qlvbStopRequested = false;
 // Hàm cào chính
 async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendResponseCallback = null) {
     if (window._qlvbStopRequested) return;
-    createOverlay();
-    updateStatus("Bắt đầu quét danh sách...");
-    updateProgress(10);
+    try {
+        createOverlay();
+        updateStatus("Bắt đầu quét danh sách...");
+        updateProgress(10);
     addLog("🔍 Đang đọc HTML bảng dữ liệu hiện tại...", "info");
 
     // 1. Quét DOM
@@ -349,9 +350,12 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                 } else {
                     addLog(`❌ Tải thất bại (Lỗi mạng từ Sở): ${task.f.fileName}`, "error");
                 }
-                filesDownloaded++;
-                updateProgress(20 + Math.round((filesDownloaded / fileTasks.length) * 60));
-            });
+            } catch (e) {
+                addLog(`❌ Lỗi tải file ${task.f.fileName}: ${e.message}`, "error");
+            }
+            filesDownloaded++;
+            updateProgress(20 + Math.round((filesDownloaded / fileTasks.length) * 60));
+        });
 
             updateStatus("Đang đẩy dữ liệu sang Web App...");
             updateProgress(85);

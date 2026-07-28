@@ -419,8 +419,13 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
             updateStatus("Phát hiện có trang tiếp theo! Đang chuẩn bị chuyển trang...");
             addLog(`👉 Chuẩn bị lật sang trang tiếp theo sau 2 giây...`, "info");
             
-            // Lấy mẫu HTML của bảng dữ liệu hiện tại để so sánh. Tránh trường hợp bấm nút Next nhưng trang không thèm load (Lặp vô hạn).
-            const mainTable = document.querySelector('.table-hover, table[id*="DataList"], table');
+            // Hàm tìm bảng dữ liệu chính xác
+            function getDataTable() {
+                const tables = Array.from(document.querySelectorAll('table'));
+                return tables.find(t => t.innerText.includes('Trích yếu') && t.innerText.includes('Số đến')) || document.querySelector('table');
+            }
+            
+            const mainTable = getDataTable();
             const currentTableHTML = mainTable ? mainTable.innerHTML : "";
             
             setTimeout(() => {
@@ -431,7 +436,7 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                 
                 // Hàm Polling: Kiểm tra liên tục xem bảng dữ liệu đã thay đổi (Load xong) chưa
                 function checkTableChanged() {
-                    const newTable = document.querySelector('.table-hover, table[id*="DataList"], table');
+                    const newTable = getDataTable();
                     const newTableHTML = newTable ? newTable.innerHTML : "";
                     
                     if (newTableHTML !== currentTableHTML && currentTableHTML !== "") {
@@ -440,15 +445,25 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                     } else {
                         checkCount++;
                         if (checkCount < 20) {
-                            // Dữ liệu chưa đổi (Có thể mạng đang chậm và đang hiện chữ "Vui lòng đợi"). Tiếp tục chờ thêm 1 giây.
+                            // Dữ liệu chưa đổi. Tiếp tục chờ thêm 1 giây.
                             window._ajaxCrawlTimeout = setTimeout(checkTableChanged, 1000);
                         } else {
-                            // Chờ 20 giây rồi mà không có gì thay đổi -> Nút Click không có tác dụng -> Đã ở trang cuối.
-                            addLog(`🏁 Đã click Trang Sau nhưng sau 20s dữ liệu không đổi (có thể đã ở trang cuối). Ngăn chặn lặp vô hạn.`, "success");
-                            sessionStorage.removeItem('QLVB_AUTO_CRAWL');
-                            sessionStorage.removeItem('QLVB_CONCURRENCY');
-                            updateProgress(100);
-                            updateStatus(`🎉 HOÀN TẤT! Đã đồng bộ toàn bộ các trang.`);
+                            // Chờ 20 giây rồi mà không có gì thay đổi -> Cố gắng click lại bằng Javascript thuần (nếu href là javascript:)
+                            if (checkCount === 20 && nextBtn.href && nextBtn.href.includes('javascript:')) {
+                                addLog(`⏳ Thử lật trang bằng lệnh JS trực tiếp...`, "info");
+                                location.href = nextBtn.href;
+                                checkCount++;
+                                window._ajaxCrawlTimeout = setTimeout(checkTableChanged, 1000);
+                            } else if (checkCount < 25) {
+                                checkCount++;
+                                window._ajaxCrawlTimeout = setTimeout(checkTableChanged, 1000);
+                            } else {
+                                addLog(`🏁 Đã click Trang Sau nhưng sau 25s dữ liệu không đổi (có thể đã ở trang cuối). Ngăn chặn lặp vô hạn.`, "success");
+                                sessionStorage.removeItem('QLVB_AUTO_CRAWL');
+                                sessionStorage.removeItem('QLVB_CONCURRENCY');
+                                updateProgress(100);
+                                updateStatus(`🎉 HOÀN TẤT! Đã đồng bộ toàn bộ các trang.`);
+                            }
                         }
                     }
                 }

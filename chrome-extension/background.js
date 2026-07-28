@@ -44,17 +44,131 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         broadcastProgress('SYNC_PROGRESS', request.message, request.percent, request.logType);
     }
     
-    // Nhận dữ liệu cào được và chuyển về Web App để xử lý lưu vào Firebase
+    // Nhận dữ liệu cào được và xử lý TRỰC TIẾP LƯU VÀO FIREBASE
     if (request.action === 'SYNC_DATA') {
-        chrome.tabs.query({ url: ["*://qlvb.io.vn/*", "*://qlvbpr.io.vn/*", "*://localhost/*", "*://script.google.com/*", "*://*.script.googleusercontent.com/*"] }, (tabs) => {
-            for (const tab of tabs) {
-                chrome.tabs.sendMessage(tab.id, { 
-                    type: 'SYNC_DATA_PAYLOAD', 
-                    data: request.data
+        const batchDocs = request.data;
+        const FIREBASE_URL = 'https://qlvb-phurieng-default-rtdb.asia-southeast1.firebasedatabase.app';
+        
+        (async () => {
+            try {
+                // Lấy danh sách văn bản và nhân viên hiện tại
+                const [docsRes, staffRes] = await Promise.all([
+                    fetch(`${FIREBASE_URL}/incomingDocs.json`).then(r => r.json()),
+                    fetch(`${FIREBASE_URL}/staff.json`).then(r => r.json())
+                ]);
+                
+                const existingDocs = docsRes ? Object.values(docsRes) : [];
+                const staffList = staffRes ? Object.keys(staffRes).map(k => ({ id: k, ...staffRes[k] })) : [];
+                
+                const getStaffId = (name) => {
+                    if (!name) return '';
+                    const cleanName = name.split('(')[0].trim().toLowerCase();
+                    const staff = staffList.find(s => (s.Full_Name || s.fullName)?.toLowerCase() === cleanName);
+                    return staff ? staff.id : name;
+                };
+
+                for (const doc of batchDocs) {
+                    const signNumber = (doc.soHieu || doc.soDen || '').trim();
+                    const summary = (doc.trichYeu || '').trim();
+
+                    const isDuplicate = existingDocs.some(d => 
+                        (d.Sign_Number || '').trim() === signNumber && 
+                        (d.Summary || '').trim() === summary
+                    );
+
+                    if (isDuplicate) continue;
+
+                    // Tải file lên Drive qua Webhook
+                    let fileUrls = [];
+                    if (doc.files && doc.files.length > 0) {
+                        for (const f of doc.files) {
+                            try {
+                                const uploadRes = await fetch(DEFAULT_API_URL, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        fileName: f.fileName,
+                                        mimeType: '',
+                                        base64Content: f.base64Content
+                                    })
+                                }).then(r => r.json());
+                                
+                                if (uploadRes && uploadRes.url) {
+                                    fileUrls.push(uploadRes.url);
+                                }
+                            } catch (err) {}
+                        }
+                    }
+
+                    const assigneeId = getStaffId(doc.coAssignee || doc.nguoiSoan);
+                    
+                    // Lưu văn bản vào Firebase
+                    const newDoc = {
+                        Doc_ID: doc.doc_id || '',
+                        Sign_Number: doc.soHieu || doc.soDen || '',
+                        Draft_Date: doc.ngayVanBan || '',
+                        Receive_Date: doc.ngayDen || '',
+                        Summary: doc.trichYeu || '',
+                        Issuer: doc.coQuanBanHanh || '',
+                        Assignee_ID: assigneeId,
+                        Deadline: '',
+                        Status: 'Đang xử lý',
+                        Note: doc.loaiVanBan ? `Loại VB: ${doc.loaiVanBan}` : '',
+                        Co_Assignees: doc.coAssignee || '',
+                        File_URL: fileUrls.join('\\n'),
+                        createdAt: new Date().toISOString()
+                    };
+
+                    const docSaveRes = await fetch(`${FIREBASE_URL}/incomingDocs.json`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newDoc)
+                    }).then(r => r.json());
+                    
+                    const newDocId = docSaveRes.name;
+
+                    // Tạo Task chủ trì
+                    if (assigneeId) {
+                        await fetch(`${FIREBASE_URL}/tasks.json`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                Source: 'Văn bản đến', Linked_Doc_ID: newDocId, Category: 'Văn bản chỉ đạo', Priority: doc.doKhan || 'Bình thường', Status: 'Đang xử lý', Assignee_ID: assigneeId, Role: 'Chủ trì', Deadline: '', createdAt: new Date().toISOString()
+                            })
+                        });
+                    }
+
+                    // Tạo Task phối hợp
+                    if (doc.coAssignee) {
+                        const coAssigneesArr = doc.coAssignee.split(',').filter(x => x.trim() !== '');
+                        for (const coName of coAssigneesArr) {
+                            const coId = getStaffId(coName.trim());
+                            if (coId && coId !== assigneeId) {
+                                await fetch(`${FIREBASE_URL}/tasks.json`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        Source: 'Văn bản đến', Linked_Doc_ID: newDocId, Category: 'Văn bản chỉ đạo', Priority: doc.doKhan || 'Bình thường', Status: 'Đang xử lý', Assignee_ID: coId, Role: 'Phối hợp', Deadline: '', createdAt: new Date().toISOString()
+                                    })
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                // Đồng bộ xong thì bắn tín hiệu sang các tab Web App đang mở (nếu có) để chúng tự Refresh giao diện
+                chrome.tabs.query({ url: ["*://qlvb.io.vn/*", "*://qlvbpr.io.vn/*", "*://localhost/*", "*://script.google.com/*", "*://*.script.googleusercontent.com/*"] }, (tabs) => {
+                    for (const tab of tabs) {
+                        chrome.tabs.sendMessage(tab.id, { type: 'SYNC_COMPLETE' }).catch(() => {});
+                    }
                 });
+                
+            } catch (err) {
+                console.error("Lỗi khi lưu Firebase trực tiếp từ Extension:", err);
             }
-        });
-        sendResponse({ success: true, message: 'Đã gửi tới Web App' });
+        })();
+        
+        sendResponse({ success: true, message: 'Đã xử lý lưu vào Firebase' });
         return true;
     }
     if (request.action === 'EVAL_IN_MAIN_WORLD') {
@@ -97,7 +211,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 },
                 args: [request.doc_id]
             }, (results) => {
-                sendResponse(results && results[0] ? results[0].result : []);
+                if (chrome.runtime.lastError) {
+                    sendResponse([]);
+                } else {
+                    sendResponse(results && results[0] ? results[0].result : []);
+                }
             });
             return true;
         }
@@ -139,7 +257,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 },
                 args: [request.doc_id]
             }, (results) => {
-                sendResponse(results && results[0] ? results[0].result : []);
+                if (chrome.runtime.lastError) {
+                    sendResponse([]);
+                } else {
+                    sendResponse(results && results[0] ? results[0].result : []);
+                }
             });
             return true;
         }
@@ -155,7 +277,7 @@ function broadcastProgress(type, message, percent = 0, logType = 'info') {
                 message: message,
                 percent: percent,
                 logType: logType
-            });
+            }).catch(() => {});
         }
     });
 }

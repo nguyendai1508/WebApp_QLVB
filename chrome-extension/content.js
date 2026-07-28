@@ -11,8 +11,9 @@ function createOverlay() {
     overlay.innerHTML = `
         <style>
             #qlvb-sync-overlay { position: fixed; bottom: 20px; right: 20px; width: 420px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 1px solid #0f3460; border-radius: 16px; color: #e0e0e0; font-family: 'Segoe UI', system-ui, sans-serif; font-size: 13px; z-index: 999999; box-shadow: 0 8px 32px rgba(0,0,0,0.5); overflow: hidden; }
-            #qlvb-sync-header { background: linear-gradient(90deg, #0f3460, #533483); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
-            #qlvb-sync-header h3 { margin: 0; font-size: 14px; color: #fff; display: flex; align-items: center; gap: 8px; }
+            #qlvb-sync-header { background: linear-gradient(90deg, #0f3460, #533483); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; cursor: grab; }
+            #qlvb-sync-header:active { cursor: grabbing; }
+            #qlvb-sync-header h3 { margin: 0; font-size: 14px; color: #fff; display: flex; align-items: center; gap: 8px; pointer-events: none; }
             #qlvb-sync-status { padding: 10px 16px; font-size: 12px; color: #a0aec0; border-bottom: 1px solid #0f3460; line-height: 1.5; }
             #qlvb-sync-progress-bar { height: 4px; background: #1a1a2e; }
             #qlvb-sync-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #00b4d8, #48cae4); transition: width 0.3s ease; border-radius: 2px; }
@@ -21,10 +22,11 @@ function createOverlay() {
             .qlvb-log-item.success { color: #48cae4; }
             .qlvb-log-item.error { color: #e94560; }
             .qlvb-log-item.info { color: #a0aec0; }
-            #qlvb-sync-close { background: none; border: none; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 18px; }
+            #qlvb-sync-close { background: none; border: none; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 18px; padding: 0 5px; }
+            #qlvb-sync-close:hover { color: #fff; }
         </style>
         <div id="qlvb-sync-header">
-            <h3>⚡ QLVB Sync -> Google Sheets</h3>
+            <h3>⚡ QLVB Sync -> Web App</h3>
             <button id="qlvb-sync-close">✕</button>
         </div>
         <div id="qlvb-sync-status">Đang khởi tạo...</div>
@@ -32,7 +34,53 @@ function createOverlay() {
         <div id="qlvb-sync-log"></div>
     `;
     (document.body || document.documentElement).appendChild(overlay);
+    
     document.getElementById("qlvb-sync-close").addEventListener("click", () => overlay.style.display = "none");
+    
+    // Thêm chức năng kéo thả (Draggable)
+    const header = document.getElementById("qlvb-sync-header");
+    let isDragging = false;
+    let currentX;
+    let currentY;
+    let initialX;
+    let initialY;
+    let xOffset = 0;
+    let yOffset = 0;
+
+    header.addEventListener("mousedown", dragStart);
+    document.addEventListener("mouseup", dragEnd);
+    document.addEventListener("mousemove", drag);
+
+    function dragStart(e) {
+        if (e.target.id === "qlvb-sync-close") return;
+        initialX = e.clientX - xOffset;
+        initialY = e.clientY - yOffset;
+        isDragging = true;
+    }
+
+    function dragEnd(e) {
+        initialX = currentX;
+        initialY = currentY;
+        isDragging = false;
+    }
+
+    function drag(e) {
+        if (isDragging) {
+            e.preventDefault();
+            currentX = e.clientX - initialX;
+            currentY = e.clientY - initialY;
+            xOffset = currentX;
+            yOffset = currentY;
+            
+            // Xóa fixed bottom/right ban đầu để dùng transform
+            overlay.style.bottom = "auto";
+            overlay.style.right = "auto";
+            overlay.style.left = "20px";
+            overlay.style.top = "20px";
+            
+            overlay.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+        }
+    }
 }
 
 function updateStatus(text) { 
@@ -90,8 +138,18 @@ function getFilesForDoc(doc_id) {
 // Hàm gửi yêu cầu lấy danh sách đồng xử lý tới background (bypass CSP)
 function getCoAssigneesForDoc(doc_id) {
     return new Promise((resolve) => {
-
-
+        chrome.runtime.sendMessage({ 
+            action: 'EVAL_IN_MAIN_WORLD', 
+            doc_id: doc_id,
+            scriptType: 'getCoAssignees'
+        }, (response) => {
+            resolve(response || []);
+        });
+        
+        // Bắt lỗi timeout an toàn
+        setTimeout(() => resolve([]), 5000);
+    });
+}
 // Bóc tách bảng dữ liệu theo cấu trúc VNPT Đồng Nai
 function scrapeCurrentPage() {
     const tables = Array.from(document.querySelectorAll('table'));

@@ -14,7 +14,7 @@ window.addEventListener('message', (event) => {
 
     if (event.data && event.data.type === 'QLVB_TRIGGER_SYNC') {
         // Chuyển tiếp lệnh sang Background Script của Extension
-        chrome.runtime.sendMessage({ action: 'START_SYNC_FROM_WEBAPP' });
+        chrome.runtime.sendMessage({ action: 'START_SYNC_FROM_WEBAPP', existingKeys: event.data.existingKeys || [] });
     }
 });
 

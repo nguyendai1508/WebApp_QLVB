@@ -256,7 +256,7 @@ async function processWithConcurrency(items, limit, asyncFn) {
 }
 
 // Hàm thực thi Cào và Đồng bộ
-async function startScraping(apiUrl, concurrency = 4, sendResponseCallback = null) {
+async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendResponseCallback = null) {
     try {
         createOverlay();
         updateStatus("Bắt đầu quét danh sách...");
@@ -281,34 +281,24 @@ async function startScraping(apiUrl, concurrency = 4, sendResponseCallback = nul
             return;
         }
 
-        // ---------- KIỂM TRA TRÙNG LẶP -----------
-        updateStatus("Đang kiểm tra trùng lặp trên Server...");
+        // ---------- KIỂM TRA TRÙNG LẶP DỰA TRÊN DỮ LIỆU TỪ WEB APP -----------
+        updateStatus("Đang đối chiếu dữ liệu...");
         addLog(`🔍 Kiểm tra trùng lặp ${items.length} văn bản...`, "info");
         
         let rawDocs = items.map(item => ({ ...item.payload }));
         let skipCount = 0;
         
-        try {
-            const checkRes = await fetch(apiUrl, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ action: "check_exists", docs: rawDocs })
-            });
-            const checkData = await checkRes.json();
+        if (existingKeys && existingKeys.length > 0) {
+            const keysSet = new Set(existingKeys);
+            const originalLength = items.length;
             
-            if (checkData.success && checkData.newDocs) {
-                const newKeys = new Set(checkData.newDocs.map(d => `${(d.soHieu || d.soDen || '').trim()}|${(d.trichYeu || '').trim()}`));
-                
-                // Lọc lại mảng items CHỈ GIỮ LẠI NHỮNG VĂN BẢN MỚI
-                items = items.filter(item => {
-                    const d = item.payload;
-                    const docKey = `${(d.soHieu || d.soDen || '').trim()}|${(d.trichYeu || '').trim()}`;
-                    return newKeys.has(docKey);
-                });
-                skipCount = checkData.skippedCount;
-            }
-        } catch (error) {
-            addLog(`⚠️ Không thể kiểm tra trùng lặp (Mất kết nối). Tiến hành xử lý tất cả...`, "warning");
+            // Lọc lại mảng items CHỈ GIỮ LẠI NHỮNG VĂN BẢN MỚI
+            items = items.filter(item => {
+                const d = item.payload;
+                const docKey = `${(d.soHieu || d.soDen || '').trim()}|${(d.trichYeu || '').trim()}`;
+                return !keysSet.has(docKey);
+            });
+            skipCount = originalLength - items.length;
         }
         
         let docsPayload = [];
@@ -529,27 +519,37 @@ async function startScraping(apiUrl, concurrency = 4, sendResponseCallback = nul
 // Lắng nghe lệnh từ popup.js
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "START_SCRAPE") {
+        const concurrency = request.concurrency || 4;
+        const apiUrl = request.apiUrl;
+        const existingKeys = request.existingKeys || [];
+        
         // Kích hoạt cờ Quét tự động
         sessionStorage.setItem('QLVB_AUTO_CRAWL', 'true');
-        sessionStorage.setItem('QLVB_API_URL', request.apiUrl);
-        sessionStorage.setItem('QLVB_CONCURRENCY', request.concurrency ? request.concurrency.toString() : '4');
+        sessionStorage.setItem('QLVB_API_URL', apiUrl);
+        sessionStorage.setItem('QLVB_CONCURRENCY', concurrency.toString());
+        sessionStorage.setItem('QLVB_EXISTING_KEYS', JSON.stringify(existingKeys));
         
-        startScraping(request.apiUrl, request.concurrency, sendResponse);
+        startScraping(apiUrl, concurrency, existingKeys, sendResponse);
         return true; // Keep message channel open for async
     }
 });
 
 // TỰ ĐỘNG KHỞI CHẠY (NẾU TRANG VỪA BỊ FULL RELOAD DO CHUYỂN TRANG)
-if (sessionStorage.getItem('QLVB_AUTO_CRAWL') === 'true') {
-    const savedApiUrl = sessionStorage.getItem('QLVB_API_URL');
-    const savedConcurrency = parseInt(sessionStorage.getItem('QLVB_CONCURRENCY'), 10) || 4;
-    if (savedApiUrl) {
-        // Đợi 3 giây cho DOM load an toàn trước khi cào
+window.addEventListener('load', () => {
+    if (sessionStorage.getItem('QLVB_AUTO_CRAWL') === 'true') {
+        const apiUrl = sessionStorage.getItem('QLVB_API_URL') || "https://script.google.com/macros/s/AKfycbwh8G4ZN-ye5vey26m2JuTus93L63pfMFCoUoyX18kMRnPU6rZbuQCoSYuayFSFTYnl/exec";
+        const concurrency = parseInt(sessionStorage.getItem('QLVB_CONCURRENCY')) || 4;
+        let existingKeys = [];
+        try {
+            existingKeys = JSON.parse(sessionStorage.getItem('QLVB_EXISTING_KEYS') || '[]');
+        } catch (e) {}
+        
+        // Cần chút thời gian cho trang load xong hẳn
         setTimeout(() => {
-            startScraping(savedApiUrl, savedConcurrency);
-        }, 3000);
+            startScraping(apiUrl, concurrency, existingKeys);
+        }, 1500);
     }
-}
+});
 
 // ==========================================
 // TẠO NÚT ĐỒNG BỘ NỔI TRÊN TRANG VNPT

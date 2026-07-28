@@ -17,7 +17,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 chrome.tabs.sendMessage(tab.id, { 
                     action: "START_SCRAPE", 
                     apiUrl: DEFAULT_API_URL, 
-                    concurrency: DEFAULT_CONCURRENCY 
+                    concurrency: DEFAULT_CONCURRENCY,
+                    existingKeys: request.existingKeys || []
                 }, (response) => {
                     if (chrome.runtime.lastError) {
                         broadcastProgress('SYNC_ERROR', "Lỗi kết nối tới tab VNPT. Vui lòng tải lại trang VNPT!");

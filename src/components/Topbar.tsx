@@ -54,7 +54,22 @@ export function Topbar() {
             const batchDocs = data.data;
             if (!batchDocs || !Array.isArray(batchDocs)) return;
             
+            const existingDocs = await api.getIncomingDocs();
+            
             for (const doc of batchDocs) {
+                const signNumber = (doc.soHieu || doc.soDen || '').trim();
+                const summary = (doc.trichYeu || '').trim();
+
+                const isDuplicate = existingDocs.some((d: any) => 
+                    (d.Sign_Number || '').trim() === signNumber && 
+                    (d.Summary || '').trim() === summary
+                );
+
+                if (isDuplicate) {
+                    console.log("Bỏ qua văn bản đã tồn tại:", signNumber);
+                    continue;
+                }
+
                 // Fetch staff to map names to IDs
                 const staffList = await api.getStaffList();
                 const getStaffId = (name: string) => {
@@ -70,8 +85,8 @@ export function Topbar() {
                     for (const f of doc.files) {
                         try {
                             const uploadRes = await api.uploadFileToDrive(f.fileName, '', f.base64Content);
-                            if (uploadRes && uploadRes.fileUrl) {
-                                fileUrls.push(uploadRes.fileUrl);
+                            if (uploadRes && uploadRes.url) {
+                                fileUrls.push(uploadRes.url);
                             }
                         } catch (err) {
                             console.error("Lỗi tải file", err);
@@ -148,12 +163,22 @@ export function Topbar() {
     return () => window.removeEventListener('message', handleMessage);
   }, [initialize]);
 
-  const handleSyncClick = () => {
+  const handleSyncClick = async () => {
     if (document.getElementById('qlvb-extension-installed')) {
       setIsSyncing(true);
-      setSyncStatus('Đang kết nối Extension...');
+      setSyncStatus('Đang chuẩn bị dữ liệu đồng bộ...');
       setSyncProgress(0);
-      window.postMessage({ type: 'QLVB_TRIGGER_SYNC' }, '*');
+      
+      try {
+        const { api } = await import('@/services/api');
+        const existingDocs = await api.getIncomingDocs();
+        const existingKeys = existingDocs.map(d => `${(d.Sign_Number || '').trim()}|${(d.Summary || '').trim()}`);
+        
+        window.postMessage({ type: 'QLVB_TRIGGER_SYNC', existingKeys }, '*');
+      } catch (err) {
+        console.error("Lỗi lấy dữ liệu trùng lặp", err);
+        window.postMessage({ type: 'QLVB_TRIGGER_SYNC', existingKeys: [] }, '*');
+      }
     } else {
       alert('Vui lòng cài đặt (hoặc tải lại) Extension QLVB Sync Google Sheets!');
     }

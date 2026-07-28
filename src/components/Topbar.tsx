@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import {  Search, LogOut, PlusCircle , MessageCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, LogOut, PlusCircle, MessageCircle, RefreshCw } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useAppStore } from '@/store/useAppStore';
 import { Modal } from './Modal';
@@ -34,6 +34,44 @@ export function Topbar() {
 
   const { title, desc } = getPageTitle();
 
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState(0);
+  const [syncStatus, setSyncStatus] = useState('');
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const data = event.data;
+      if (!data || !data.type) return;
+
+      if (data.type === 'SYNC_PROGRESS') {
+        setIsSyncing(true);
+        if (data.message) setSyncStatus(data.message);
+        if (data.percent !== undefined) setSyncProgress(data.percent);
+      } else if (data.type === 'SYNC_COMPLETE') {
+        setSyncStatus(data.message || 'Hoàn tất đồng bộ!');
+        setSyncProgress(100);
+        setTimeout(() => { setIsSyncing(false); setSyncStatus(''); }, 5000);
+        initialize(); // Reload data
+      } else if (data.type === 'SYNC_ERROR') {
+        setSyncStatus(data.message || 'Lỗi đồng bộ!');
+        setTimeout(() => { setIsSyncing(false); setSyncStatus(''); }, 5000);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [initialize]);
+
+  const handleSyncClick = () => {
+    if (document.getElementById('qlvb-extension-installed')) {
+      setIsSyncing(true);
+      setSyncStatus('Đang kết nối Extension...');
+      setSyncProgress(0);
+      window.postMessage({ type: 'QLVB_TRIGGER_SYNC' }, '*');
+    } else {
+      alert('Vui lòng cài đặt (hoặc tải lại) Extension QLVB Sync Google Sheets!');
+    }
+  };
+
   const handleLogout = () => {
     setUser(null);
   };
@@ -49,6 +87,16 @@ export function Topbar() {
         <div className="flex items-center gap-4">
           {/* Quick Actions */}
           <div className="flex items-center gap-2">
+            {permissions.canAddIncoming && (
+              <button 
+                onClick={handleSyncClick}
+                disabled={isSyncing}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-bold hover:bg-blue-100 transition-colors border border-blue-200"
+              >
+                <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                {isSyncing ? 'Đang đồng bộ...' : 'Đồng bộ VNPT'}
+              </button>
+            )}
             {permissions.canAddIncoming && (
               <button 
                 onClick={() => setShowIncomingModal(true)}
@@ -206,6 +254,26 @@ export function Topbar() {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Sync Progress Toast */}
+      {isSyncing && (
+        <div className="fixed bottom-4 right-4 bg-white rounded-lg shadow-xl border border-blue-100 p-4 w-80 z-[9999] animate-in slide-in-from-bottom-5">
+          <div className="flex justify-between items-center mb-2">
+            <h4 className="font-bold text-sm text-gray-800 flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />
+              Đồng bộ VNPT
+            </h4>
+            <span className="text-xs font-bold text-blue-600">{syncProgress}%</span>
+          </div>
+          <div className="w-full bg-gray-100 rounded-full h-1.5 mb-2 overflow-hidden">
+            <div 
+              className="bg-blue-600 h-1.5 rounded-full transition-all duration-300 ease-out" 
+              style={{ width: `${syncProgress}%` }}
+            ></div>
+          </div>
+          <p className="text-xs text-gray-500 truncate" title={syncStatus}>{syncStatus}</p>
+        </div>
       )}
     </>
   );

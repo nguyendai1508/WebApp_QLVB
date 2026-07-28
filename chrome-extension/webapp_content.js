@@ -1,11 +1,13 @@
 // webapp_content.js
 // Chạy trên trang Web App (qlvb.io.vn) để làm cầu nối giao tiếp với Extension
 
-// Cắm cờ hiệu vào DOM để React Web App biết Extension đã được cài đặt
-const marker = document.createElement('div');
-marker.id = 'qlvb-extension-installed';
-marker.style.display = 'none';
-document.body.appendChild(marker);
+document.addEventListener('DOMContentLoaded', () => {
+    // Thêm một div ẩn để Web App nhận diện Extension đã cài đặt
+    const marker = document.createElement('div');
+    marker.id = 'qlvb-extension-installed';
+    marker.style.display = 'none';
+    (document.body || document.documentElement).appendChild(marker);
+});
 
 // Lắng nghe tín hiệu từ React Web App (qua window.postMessage)
 window.addEventListener('message', (event) => {

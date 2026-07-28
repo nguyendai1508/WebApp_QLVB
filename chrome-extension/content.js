@@ -31,7 +31,7 @@ function createOverlay() {
         <div id="qlvb-sync-progress-bar"><div id="qlvb-sync-progress-fill"></div></div>
         <div id="qlvb-sync-log"></div>
     `;
-    document.body.appendChild(overlay);
+    (document.body || document.documentElement).appendChild(overlay);
     document.getElementById("qlvb-sync-close").addEventListener("click", () => overlay.style.display = "none");
 }
 
@@ -113,7 +113,7 @@ function getFilesForDoc(doc_id) {
                 window.postMessage({ type: 'QLVB_FILE_DATA', doc_id: '${doc_id}', data: [] }, '*');
             }
         `;
-        document.body.appendChild(script);
+        (document.body || document.documentElement).appendChild(script);
         setTimeout(() => script.remove(), 1000);
         
                         // Timeout after 5s
@@ -166,7 +166,7 @@ function getCoAssigneesForDoc(doc_id) {
                 window.postMessage({ type: 'QLVB_CO_ASSIGNEE_DATA', doc_id: '${doc_id}', data: [] }, '*');
             }
         `;
-        document.body.appendChild(script);
+        (document.body || document.documentElement).appendChild(script);
         setTimeout(() => script.remove(), 1000);
         
         setTimeout(() => {

@@ -64,20 +64,37 @@ export function Topbar() {
                     return staff ? staff.id : name;
                 };
 
-                const assigneeId = getStaffId(doc.Assignee);
+                // Upload files to Google Drive via Webhook
+                let fileUrls = [];
+                if (doc.files && doc.files.length > 0) {
+                    for (const f of doc.files) {
+                        try {
+                            const uploadRes = await api.uploadFileToDrive(f.fileName, '', f.base64Content);
+                            if (uploadRes && uploadRes.fileUrl) {
+                                fileUrls.push(uploadRes.fileUrl);
+                            }
+                        } catch (err) {
+                            console.error("Lỗi tải file", err);
+                        }
+                    }
+                }
+
+                const assigneeId = getStaffId(doc.coAssignee || doc.nguoiSoan);
                 
                 // Add doc to Firebase
                 const newDoc = await api.createIncomingDoc({
-                    Doc_ID: doc.Doc_ID,
-                    Sign_Number: doc.Sign_Number,
-                    Draft_Date: doc.Draft_Date,
-                    Summary: doc.Summary,
-                    Issuer: doc.Issuer,
+                    Doc_ID: doc.doc_id || '',
+                    Sign_Number: doc.soHieu || doc.soDen || '',
+                    Draft_Date: doc.ngayVanBan || '',
+                    Receive_Date: doc.ngayDen || '',
+                    Summary: doc.trichYeu || '',
+                    Issuer: doc.coQuanBanHanh || '',
                     Assignee_ID: assigneeId,
-                    Deadline: doc.Deadline,
+                    Deadline: '', // Not provided by VNPT list
                     Status: 'Đang xử lý',
-                    Note: doc.Note || '',
-                    Co_Assignees: doc.Co_Assignees || ''
+                    Note: doc.loaiVanBan ? `Loại VB: ${doc.loaiVanBan}` : '',
+                    Co_Assignees: doc.coAssignee || '',
+                    File_URL: fileUrls.join('\n')
                 });
 
                 // Auto generate primary task
@@ -86,29 +103,29 @@ export function Topbar() {
                         Source: 'Văn bản đến',
                         Linked_Doc_ID: newDoc.id,
                         Category: 'Văn bản chỉ đạo',
-                        Priority: 'Bình thường',
+                        Priority: doc.doKhan || 'Bình thường',
                         Status: 'Đang xử lý',
                         Assignee_ID: assigneeId,
                         Role: 'Chủ trì',
-                        Deadline: doc.Deadline || ''
+                        Deadline: ''
                     });
                 }
 
                 // Auto generate co-assignee tasks
-                if (doc.Co_Assignees) {
-                    const coAssigneesArr = doc.Co_Assignees.split('.').filter((x:string) => x.trim() !== '');
+                if (doc.coAssignee) {
+                    const coAssigneesArr = doc.coAssignee.split(',').filter((x:string) => x.trim() !== '');
                     for (const coName of coAssigneesArr) {
                         const coId = getStaffId(coName.trim());
-                        if (coId) {
+                        if (coId && coId !== assigneeId) {
                             await api.createTask({
                                 Source: 'Văn bản đến',
                                 Linked_Doc_ID: newDoc.id,
                                 Category: 'Văn bản chỉ đạo',
-                                Priority: 'Bình thường',
+                                Priority: doc.doKhan || 'Bình thường',
                                 Status: 'Đang xử lý',
                                 Assignee_ID: coId,
                                 Role: 'Phối hợp',
-                                Deadline: doc.Deadline || ''
+                                Deadline: ''
                             });
                         }
                     }

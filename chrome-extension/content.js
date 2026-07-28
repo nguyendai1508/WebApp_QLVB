@@ -615,15 +615,31 @@ function injectFloatingButton() {
     console.log("[QLVB Sync] Đã chèn nút nổi thành công vào", container.tagName);
 }
 
-// Chạy hàm tạo nút liên tục 5 lần để đảm bảo không bị JS của trang ghi đè
-let injectAttempts = 0;
-const injectInterval = setInterval(() => {
-    if (injectAttempts >= 5) {
-        clearInterval(injectInterval);
-        return;
+// Quản lý trạng thái hiển thị của nút nổi liên tục
+setInterval(() => {
+    // 1. Kiểm tra bảng văn bản có tồn tại không
+    const tables = Array.from(document.querySelectorAll('table'));
+    const isValidPage = tables.some(t => t.innerText.includes('Trích yếu') && t.innerText.includes('Số đến'));
+    
+    // 2. Kiểm tra Overlay có đang mở không
+    const overlay = document.getElementById('qlvb-sync-overlay');
+    const isOverlayOpen = overlay && overlay.style.display !== 'none';
+
+    let btn = document.getElementById('qlvb-floating-sync-btn');
+    
+    // Nếu trang hợp lệ nhưng chưa có nút, thì tạo nút
+    if (isValidPage && !btn) {
+        injectFloatingButton();
+        btn = document.getElementById('qlvb-floating-sync-btn');
     }
-    injectFloatingButton();
-    injectAttempts++;
+
+    if (btn) {
+        if (!isValidPage || isOverlayOpen) {
+            btn.style.display = 'none';
+        } else {
+            btn.style.display = 'flex';
+        }
+    }
 }, 1000);
 
 } // End of window.qlvbContentScriptInjected check

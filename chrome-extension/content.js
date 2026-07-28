@@ -417,8 +417,9 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                 updateProgress(85 + Math.round((docsSent / docsPayload.length) * 15));
             });
         addLog(`✅ Xong trang hiện tại: Thêm mới ${successCount} VB. Bỏ qua ${skipCount} VB cũ.`, "success");
+    }
 
-        // ==========================================
+    // ==========================================
         // TỰ ĐỘNG CHUYỂN TRANG (AUTO-PAGINATION) CHỐNG LẶP VÔ HẠN
         // ==========================================
         const nextIcon = document.querySelector('.pagination .fa-forward');

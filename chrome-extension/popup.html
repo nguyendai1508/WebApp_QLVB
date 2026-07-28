@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>QLVB Sync</title>
+    <style>
+        body { width: 320px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 15px; margin: 0; background-color: #f8fafc; color: #1e293b; }
+        h3 { margin-top: 0; color: #0f172a; font-size: 16px; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #475569; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; font-size: 13px; }
+        button { width: 100%; padding: 10px; background-color: #3b82f6; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        button:hover { background-color: #2563eb; }
+        button:disabled { background-color: #94a3b8; cursor: not-allowed; }
+        #status { margin-top: 15px; font-size: 13px; font-weight: 500; line-height: 1.4; padding: 10px; border-radius: 4px; background: #e2e8f0; display: none; }
+        #status.success { background: #dcfce7; color: #166534; display: block; }
+        #status.error { background: #fee2e2; color: #991b1b; display: block; }
+        #status.info { background: #e0f2fe; color: #075985; display: block; }
+        .help-text { font-size: 11px; color: #64748b; margin-top: 15px; text-align: center; }
+    </style>
+</head>
+<body>
+    <h3>Đồng bộ QLVB -> Google Sheets</h3>
+    
+    <div class="form-group">
+        <label for="apiUrl">Google Apps Script Web App URL (doPost):</label>
+        <div style="display: flex; gap: 8px;">
+            <input type="text" id="apiUrl" placeholder="https://script.google.com/macros/s/..." style="flex: 1;" />
+            <button id="pasteBtn" style="width: auto; padding: 8px 12px; margin-top: 5px; background: #64748b; font-size: 13px;">📋 Dán</button>
+        </div>
+    </div>
+    
+    <div class="form-group" style="margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 10px; border-radius: 4px; border: 1px solid #e2e8f0;">
+        <label for="concurrency" style="margin: 0; font-weight: 500; color: #0f172a;">⚡ Số luồng chạy (Tốc độ):</label>
+        <div style="display: flex; align-items: center; gap: 5px;">
+            <input type="number" id="concurrency" min="1" max="6" value="4" style="width: 60px; padding: 4px; margin: 0; text-align: center; border: 1px solid #cbd5e1; border-radius: 4px;" />
+            <span style="font-size: 11px; color: #64748b;">(Tối đa 6)</span>
+        </div>
+    </div>
+
+    <button id="syncBtn">🚀 Bắt đầu Đồng bộ</button>
+    
+    <div id="status"></div>
+    
+    <div class="help-text">
+        Bạn phải Đăng nhập vào trang QLVB Sở Đồng Nai trước khi bấm Đồng bộ.
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,414 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head id="Head1"><title>
+	Quản lý văn bản & Điều hành
+    
+</title><link id="Link1" rel="shortcut icon" href="../Assets/img/favicon.ico" type="image/x-icon" /><link id="Link2" rel="icon" href="../Assets/img/favicon.png" type="image/ico" /><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" /><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" /><meta name="apple-mobile-web-app-capable" content="yes" /><meta name="apple-touch-fullscreen" content="yes" /><meta name="description" content="Quản lý văn bản &amp; Điều hành" /><meta name="author" content="Trung tâm Công nghệ thông tin - Sở Nông nghiệp và Môi trường thành phố Đồng Nai" /><meta charset="UTF-8" /><link type="text/css" rel="stylesheet" href="../Assets/css/login.css" /><link href="../Assets/bs5/dist/css/bootstrap.min.css" rel="stylesheet" /><link href="../Assets/bs5/dist/font-awesome-4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+	<script type="text/javascript" language="javascript" src='/Assets/bs5/dist/js/bootstrap.bundle.min.js'></script>
+    <script type="text/javascript" language="javascript" src='/Assets/js/jquery-1.8.3.min.js'></script>
+    
+    <style type="text/css">
+        .form-container {
+            display: block;
+            top: 25%;
+            position: absolute;
+            left: 0px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .form-signin {
+            max-width: 850px;
+            padding: 15px;
+            padding-top: 40px;
+            padding-bottom: 40px;
+            background-color: #f5f5f5;
+            width: 70%;
+            border-radius: 10px;
+            opacity: 0.8;
+        }
+
+        .form-control-lg {
+            font-size: 1.1rem;
+        }
+
+        .tieude1 {
+            font-size: 26px;
+        }
+
+        .tieude2 {
+            font-size: 22px;
+        }
+
+        @media only screen and (max-width: 600px) {
+            #Headline {
+                position: absolute;
+                top: 2%;
+                text-align: center;
+                display: block;
+            }
+
+            .quochuy {
+                margin: auto;
+                float: none !important;
+            }
+
+            .tieude1 {
+                font-size: 18px;
+            }
+
+            .tieude2 {
+                font-size: 16px;
+            }
+
+            .title {
+                margin-top: 10px;
+            }
+
+            .hinh-phai {
+                margin-top: 20px;
+                display: none;
+            }
+
+            #info-box {
+                display: none;
+            }
+        }
+
+        #custom-input-group {
+            display: flex;
+            align-items: center;
+        }
+
+            #custom-input-group > div {
+                margin-left: -35px;
+            }
+
+        @media screen and (max-width: 600px) {
+            #custom-input-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+                #custom-input-group > div {
+                    margin-left: 0;
+                    margin-top: 10px;
+                    align-self: flex-end;
+                }
+        }
+    </style>
+</head>
+<body>
+    <form method="post" action="./pDangNhap.aspx" id="form1">
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="NGt7JuA5sIcRnPPbgk6h0Cq3hLJAo++b0brpkzus3yAi2/pGLNRLzjLbkhW0h6sn5fWhfPrcHN1RpzLTrHnfZkUW6et//Rtx04f048jHdFM06+oCnULrL0PRdL96NEOZfTaUZ6ShZYcS5d3tc24DEKCXCToyYTbqI8yC9Zje53BNDgIByD1C6Ife7AO5SDELwFFXAPaKW4au8LVm8+qugQE/D6S7BAFPShUA4i6Wd7/Gl5eqIjdX/lP83Rr/60Sp3R3a8vj0g8E3CN8z4+EEvkEbjgTtBBqY6ZryWYsPFfY6PBsvXgJXuFCjJh4qJMDK" />
+
+
+<script src="/ScriptResource.axd?d=qph9tUZ6hGPLbkznkRkqTWBJewPVW2XT_E34tRbq8NMoHQs6OnFeymCe8snisRPq9ov7FMfsuZ5e4F-Cpi7XGdV78HTnFnGtDon-SBz2uodcbNMzUOL7JlJPISBviBGg0&amp;t=7c776dc1" type="text/javascript"></script>
+<script src="/ScriptResource.axd?d=uj2s5bnF5uQ4H1auo36pE5XZh_hKBxf87ax4_tbInilRPA7de-ZikKCGwko9TiaeIRG7aSpDyMARDR65U5cFDtfH4NC0_G15R2gsfMIZZG72cnjlT1GL2dyu5BlryWG10&amp;t=7c776dc1" type="text/javascript"></script>
+<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="1BD95252" />
+<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="TTYG4F5c8H7ei7j219AdaEzIFyhJv71nj4xy8ngnuLr7rcCEuVk8wSDx8HLSGas1bt+TNuF48ZwvUG9NqzLFH+t1NgFCKTxckF8QeYfUSYPBPeU2QJQmQb7a9FDZw6+vzH3z+sPt3jxHjUkZrzEFK26MvqUyn0KgtW24VBlfhYDvuf5llov0hPAxtR1TpCIwf8ckF8wMpCexKm2T64A8rg==" />
+        
+        <div class="background intro-body" style="display: block;">
+        </div>
+        <div id="container">
+            <div id="header">
+            </div>
+            <div id="main" role="main">
+
+                <div id="Headline">
+                    <div class="quochuy" style="width: 69px; height: 69px; float: left; background-image: url(/Assets/img/quochuy.png);"></div>
+                    <div class="title" style="float: left; margin-left: 15px;">
+                        <h2 class="tieude1">ỦY BAN NHÂN DÂN THÀNH PHỐ ĐỒNG NAI</h2>
+                        <h2 class="tieude2">QUẢN LÝ VĂN BẢN & ĐIỀU HÀNH</h2>
+                    </div>
+                </div>
+                <div class="form-container">
+                    <div class="form-signin row w-100 m-auto text-center px-3">
+                        <div class="col-md-6 col-12">
+                            <h1 class="h4 mb-4 fw-bold" style="color: #272346; font-family: sans-serif;">ĐĂNG NHẬP HỆ THỐNG</h1>
+                            <div class="">
+                                <input name="txtTenDangNhap" type="text" id="txtTenDangNhap" class="form-control form-control-lg" title="Tài khoản đăng nhập" placeholder="Tài khoản đăng nhập" />
+                                &nbsp;
+                            </div>
+                            <div id="custom-input-group">
+                                <input name="txtMatKhau" type="password" id="txtMatKhau" class="form-control form-control-lg" title="Mật khẩu truy cập" placeholder="Mật khẩu" onkeypress="return clickButtonDangNhapHeThong(event,&#39;lnkDangnhap&#39;)" />
+                                <div><i id="togglePassword" class="fa fa-eye"></i></div>
+                                &nbsp;
+                            </div>
+                            <div class="">
+                                <input name="txtTenDangNhapUQ" type="text" id="txtTenDangNhapUQ" class="form-control form-control-lg" title="Tài khoản uỷ quyền" placeholder="Tài khoản ủy quyền" onkeypress="return clickButtonDangNhapHeThong(event,&#39;lnkDangnhap&#39;)" />
+                            </div>
+                            <div class="row w-100">
+                                <span id="lblThongBao"><i><font color="Red"></font></i></span>
+                            </div>
+                            <div class="row w-100">
+                                <a onclick="login_success();" id="lnkDangnhap" class="col-md-6 col-12 btn btn-lg btn-primary" href="javascript:WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(&quot;lnkDangnhap&quot;, &quot;&quot;, true, &quot;&quot;, &quot;&quot;, false, true))" style="border-radius: 35px; padding: 10px 15px; margin: 20px 0;">
+                                Đăng nhập
+                                </a>
+                                <a onclick="login_success1();" id="linkSSO" class="col-md-6 col-12 btn btn-lg btn-success" href="javascript:__doPostBack(&#39;linkSSO&#39;,&#39;&#39;)" style="border-radius: 35px; padding: 10px 15px; margin: 20px 0;">
+                                Đăng nhập SSO
+                                </a>
+                            </div>
+                            <div class="row w-100">
+                                <div class="col-md-6 col-12">
+                                    <a target='_blank' href='https://apps.apple.com/us/app/ioffice-%C4%91%E1%BB%93ng-nai/id6450439959'>
+                                        <img src="../Assets/img/AppStoreLink.png" alt="" class="img-fluid img-mobile">
+                                    </a>
+                                </div>
+                                <div class="col-md-6 col-12">
+                                    <a target='_blank' href='https://play.google.com/store/apps/details?id=com.dhcv_dongnai'>
+                                        <img src="../Assets/img/GooglePlayLink.png" alt="" class="img-fluid img-mobile">
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="" style="display: none;">
+
+                                <a href="javascript:;" class="a-forger-password"><i class="fa fa-question" aria-hidden="true"></i><span>Quên mật khẩu</span> </a>
+                                <div id="upLogin">
+	
+                                        <div>
+                                            
+                                            
+                                        </div>
+                                    
+</div>
+                                <div id="upthoigian">
+	
+                                        <span id="thoigian" style="display:none;"></span>
+                                    
+</div>
+                                <div>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-12 d-flex justify-content-center align-items-center hinh-phai">
+                            <img src="../Assets/img/logoDNai.png" alt="" class="img-fluid">
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <div id="left-col" class="">
+                <div id="info-box" class="info-box-bg">
+                    <div class="title" style="display: block;"></div>
+                    <div class="description" style="display: none;"></div>
+                    <div id="command-box" class="hover">
+                        <a href="#">
+                            <div class="info-btn btn"></div>
+                        </a>
+                        <a href="#">
+                            <div class="next-btn btn"></div>
+                        </a>
+                        <a href="#">
+                            <div class="play-btn btn"></div>
+                        </a>
+                        <a href="#">
+                            <div class="pre-btn btn"></div>
+                        </a>
+
+                    </div>
+                </div>
+            </div>
+            <div id="news-box" style="display: none;">
+            </div>
+        </div>
+
+        <script language="javascript" type="text/javascript">
+            function login_success() {
+                var user = document.getElementById("txtTenDangNhap").value;
+                var pass = document.getElementById("txtMatKhau").value
+                if (user != null && pass != null)
+                    Android.saveLoginValues(user, pass);
+            }
+            function login_success1() {
+                var user = document.getElementById("txtTenDangNhap").value;
+                var pass = document.getElementById("txtMatKhau").value;
+                if (user != null && pass != null) { }
+            }
+            function clickButtonDangNhapHeThong(e, buttonid) {
+                var evt = e ? e : window.event;
+                var bt = document.getElementById(buttonid);
+                if (bt) {
+                    if (evt.keyCode == 13) {
+                        bt.click();
+                        return false;
+                    }
+                }
+            }
+            $(document).ready(function () {
+                if ($("#txtTenDangNhapUQ").val() == "") {
+                    $("#txtTenDangNhapUQ").attr("readonly", "readonly");
+                }
+                $("input").focus(function () {
+                    $(this).removeAttr("readonly");
+                });
+            });
+            showP();
+            function showP() {
+                var togglePassword = document.querySelector('#togglePassword');
+                var password = document.querySelector('#txtMatKhau');
+
+                togglePassword.addEventListener('click', function (e) {
+                    const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+                    password.setAttribute('type', type);
+                    this.classList.toggle('fa-eye-slash');
+                });
+            }
+        </script>
+        <script language="javascript" type="text/javascript">            
+            var obj;
+            var newsjson;
+            var news;
+            var newscount = 0;
+            var timer = 25000;
+            var prebg = 0;
+            var play = true;
+            var items = [
+                {
+                    "filename": "1.jpg",
+                    "title": "",
+                    "description": "Tác giả: <a target='_blank' href=''></a>"
+                },
+                {
+                    "filename": "2.jpg",
+                    "title": "",
+                    "description": "Tác giả: <a target='_blank' href=''></a>"
+                } ,
+                {
+                    "filename": "3.jpg",
+                    "title": "",
+                    "description": "Tác giả: <a target='_blank' href=''></a>"
+                },
+                {
+                    "filename": "4.jpg",
+                    "title": "",
+                    "description": "Tác giả: <a target='_blank' href=''></a>"
+                },
+                {
+                    "filename": "5.jpg",
+                    "title": "",
+                    "description": "Tác giả: <a target='_blank' href=''></a>"
+                },
+                {
+                    "filename": "6.jpg",
+                    "title": "",
+                    "description": "Tác giả: <a target='_blank' href=''></a>"
+                },
+                {
+                    "filename": "7.jpg",
+                    "title": "",
+                    "description": "Tác giả: <a target='_blank' href=''></a>"
+                }
+
+            ];
+
+            obj = shuffle(items); console.log(obj[prebg].filename);
+            $(".background").css("background-image", 'url(/Assets/img/bglogin/' + obj[prebg].filename + ')');
+            $("#info-box .title").html(obj[prebg].title);
+            prebg++;
+
+            function shuffle(o) {
+                for (var j, x, i = o.length; i; j = Math.floor(Math.random() * i), x = o[--i], o[i] = o[j], o[j] = x);
+                return o;
+            }
+
+            function changeBg(val) {
+                if (prebg >= obj.length - 1) { prebg = 0 };
+                if (val >= 0) { prebg = prebg - 2 };
+                if (prebg < 0) { prebg = 0; };
+                $(".background").fadeOut('100', function () {
+                    $(".background").css("background-image", 'url(/Assets/img/bglogin/' + obj[prebg].filename + ')')
+                        .fadeIn('100');
+                });
+
+                prebg++;
+                $("#info-box .title").html(obj[prebg].title);
+            };
+
+            function AutoChangeBg() { if (play) changeBg(); }
+
+            function ToggleAll() {
+                if ($("#header").is(':visible')) {
+                    $('#command-box .fullscreen-btn').css("background-position", "-64px -53px");
+                    $('#loginform').css("opacity", "0.5");
+                } else {
+                    $('#command-box .fullscreen-btn').css("background-position", "-32px -53px");
+                    $('#loginform').css("opacity", "1");
+                }
+                $('#footer').toggle("slow");
+                $('#header').toggle("slow");
+                $('#news-box').toggle("slow");
+                $('#Headline').toggle("slow");
+
+            };
+
+            $(window).load(function () {
+                var myTimer = setInterval(AutoChangeBg, timer);
+
+                $('.fullscreen-btn').click(function () {
+                    ToggleAll();
+                });
+
+                $('#loginform input').focus(function () {
+                    if ($("#header").is(':hidden')) { ToggleAll() }
+                });
+                $('.next-btn').click(function () {
+                    changeBg();
+                    clearInterval(myTimer);
+                    myTimer = setInterval(AutoChangeBg, timer);
+                });
+
+                $('.pre-btn').click(function () {
+                    changeBg(prebg);
+                    clearInterval(myTimer);
+                    myTimer = setInterval(AutoChangeBg, timer);
+                });
+
+                $('.play-btn').click(function () {
+
+                    if (play) {
+                        $('#command-box .play-btn').css("background-position", "-0px -85px");
+                        play = false;
+                    } else {
+                        $('#command-box .play-btn').css("background-position", "-32px -85px");
+                        play = true;
+                    }
+                });
+
+                $(".info-btn").click(function () {
+                    $("#info-box .title").toggle("slow");
+                    $("#info-box").toggleClass("info-box-bg");
+                    setTimeout(function () {
+                        $("#command-box").removeClass('hover');
+                    }, 3000);
+
+                });
+
+                $("#command-box").hover(function () {
+                    if ($("#command-box").hasClass('hover')) {
+                        return true;
+                    } else {
+                        $("#command-box").addClass('hover');
+                        $("#info-box .title").show("slow");
+                        $("#info-box").addClass("info-box-bg");
+                        return false;
+                    }
+
+                });
+            });
+        </script>
+    
+
+<script type="text/javascript">
+//<![CDATA[
+Sys.Application.add_init(function() {
+    $create(Sys.UI._Timer, {"enabled":false,"interval":1000,"uniqueID":"thoigian"}, null, null, $get("thoigian"));
+});
+//]]>
+</script>
+</form>
+</body>
+</html>

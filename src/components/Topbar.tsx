@@ -55,6 +55,13 @@ export function Topbar() {
             if (!batchDocs || !Array.isArray(batchDocs)) return;
             
             const existingDocs = await api.getIncomingDocs();
+            const staffList = await api.getStaffList();
+            const getStaffId = (name: string) => {
+                if (!name) return '';
+                const cleanName = name.split('(')[0].trim().toLowerCase();
+                const staff = staffList.find((s: any) => (s.Full_Name || s.fullName)?.toLowerCase() === cleanName);
+                return staff ? staff.id : name;
+            };
             
             for (const doc of batchDocs) {
                 const signNumber = (doc.soHieu || doc.soDen || '').trim();
@@ -69,15 +76,6 @@ export function Topbar() {
                     console.log("Bỏ qua văn bản đã tồn tại:", signNumber);
                     continue;
                 }
-
-                // Fetch staff to map names to IDs
-                const staffList = await api.getStaffList();
-                const getStaffId = (name: string) => {
-                    if (!name) return '';
-                    const cleanName = name.split('(')[0].trim().toLowerCase();
-                    const staff = staffList.find((s: any) => s.Full_Name?.toLowerCase() === cleanName);
-                    return staff ? staff.id : name;
-                };
 
                 // Upload files to Google Drive via Webhook
                 let fileUrls = [];

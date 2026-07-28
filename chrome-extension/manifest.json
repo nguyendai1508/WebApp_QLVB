@@ -19,13 +19,28 @@
   "content_scripts": [
     {
       "matches": [
-        "*://qlvb-snnmt.dongnai.gov.vn/*"
+        "*://*.dongnai.gov.vn/*"
       ],
       "js": [
         "content.js"
       ],
       "all_frames": true,
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "*://qlvbpr.io.vn/*",
+        "*://qlvb.io.vn/*",
+        "*://localhost/*",
+        "*://script.google.com/*"
+      ],
+      "js": [
+        "webapp_content.js"
+      ],
+      "run_at": "document_idle"
     }
-  ]
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
 }

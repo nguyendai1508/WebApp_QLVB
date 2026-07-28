@@ -137,6 +137,7 @@ function doPost(e) {
       }));
       
       let rowsToAppend = []; // Khởi tạo mảng chứa các dòng dữ liệu để ghi gộp
+      let tasksToAppend = []; // Mảng chứa danh sách Công việc cần tự động sinh
 
       for (const doc of docs) {
         const soHieuDen = String(doc.soHieu || doc.soDen || '').trim();
@@ -178,7 +179,8 @@ function doPost(e) {
           'Cơ quan ban hành': doc.coQuanBanHanh || '',
           'Loại văn bản': doc.loaiVanBan || '',
           'Độ khẩn': doc.doKhan || '',
-          'Lãnh đạo giao xử lý': doc.nguoiSoan || '', // Ghi tạm
+          'Lãnh đạo giao xử lý': doc.nguoiSoan || '', // Ghi tạm XLC
+          'Cán bộ phối hợp': doc.coAssignee || '', // Ghi Đồng xử lý
           'Trạng thái xử lý': 'Mới tiếp nhận',
           'Tên file': fileNames.join(', '),
           'Đường dẫn file': fileUrls.join('\n'),
@@ -186,6 +188,45 @@ function doPost(e) {
           'Người tạo': 'Sync Bot'
         };
         rowsToAppend.push(rowData);
+        
+        // --- AUTO TASK GENERATION ---
+        // 1. Task Chủ trì
+        const xlc = String(doc.nguoiSoan || '').trim();
+        if (xlc) {
+            tasksToAppend.push({
+              'Nguồn việc': 'Theo văn bản đến',
+              'Số/Ký hiệu VB liên quan': soHieuDen,
+              'Nội dung công việc phải làm': doc.trichYeu || '',
+              'Mức độ ưu tiên': doc.doKhan || 'Bình thường',
+              'Lãnh đạo giao việc': 'Hệ thống tự động',
+              'Cán bộ chủ trì': xlc,
+              'Ngày giao': doc.ngayDen || new Date().toLocaleDateString('en-GB'),
+              'Trạng thái công việc': 'Mới tiếp nhận',
+              '% hoàn thành': 0,
+              'Người tạo': 'Sync Bot'
+            });
+        }
+        
+        // 2. Task Đồng xử lý (Phối hợp)
+        if (doc.coAssignee) {
+            const coList = doc.coAssignee.split(',').map(s => s.trim()).filter(s => s);
+            for (const coName of coList) {
+                tasksToAppend.push({
+                  'Nguồn việc': 'Theo văn bản đến',
+                  'Số/Ký hiệu VB liên quan': soHieuDen,
+                  'Nội dung công việc phải làm': doc.trichYeu || '',
+                  'Mức độ ưu tiên': doc.doKhan || 'Bình thường',
+                  'Lãnh đạo giao việc': 'Hệ thống tự động',
+                  'Cán bộ phối hợp': coName, // Đưa vào cột phối hợp
+                  'Ngày giao': doc.ngayDen || new Date().toLocaleDateString('en-GB'),
+                  'Trạng thái công việc': 'Mới tiếp nhận',
+                  '% hoàn thành': 0,
+                  'Người tạo': 'Sync Bot'
+                });
+            }
+        }
+        // -----------------------------
+
         createdCount++;
       } // Kết thúc vòng lặp tải Drive
 
@@ -208,6 +249,21 @@ function doPost(e) {
               }
               
               appendMultipleRowsByHeader(SHEET_NAMES.INCOMING, 1, rowsToAppend);
+              
+              // --- GHI GỘP TASKS MỚI ---
+              if (tasksToAppend.length > 0) {
+                  const taskSheet = getDb().getSheetByName(SHEET_NAMES.TASKS);
+                  if (taskSheet) {
+                      const taskLastRow = Math.max(taskSheet.getLastRow(), 1);
+                      for (let i = 0; i < tasksToAppend.length; i++) {
+                          const tStt = taskLastRow + i;
+                          tasksToAppend[i]['STT'] = tStt;
+                          tasksToAppend[i]['Mã việc'] = `CV-${(tStt).toString().padStart(4, '0')}`;
+                      }
+                      appendMultipleRowsByHeader(SHEET_NAMES.TASKS, 1, tasksToAppend);
+                  }
+              }
+              // -------------------------
               
               // ÉP LƯU DỮ LIỆU XUỐNG ĐĨA NGAY LẬP TỨC CHO LUỒNG KHÁC THẤY
               SpreadsheetApp.flush();

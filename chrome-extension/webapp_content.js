@@ -31,8 +31,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     
     if (request.type === 'SYNC_DATA_PAYLOAD') {
         window.postMessage({
-            type: 'SYNC_DATA_PAYLOAD',
-            data: request.data
+            type: 'SYNC_DOCS_BATCH',
+            payload: request.data
         }, "*");
     }
 });

@@ -212,17 +212,17 @@ function scrapeCurrentPage() {
         // Lấy DOC_ID từ cột Files (cột 22)
         let doc_id = '';
         const filesHtml = tds[22]?.innerHTML || "";
-        const match = filesHtml.match(/allFileDownload\\((\\d+)\\)/);
+        const match = filesHtml.match(/allFileDownload\((\d+)\)/);
         if (match) doc_id = match[1];
 
         // Format ngày tháng chuẩn YYYY-MM-DDTHH:mm:ss
         let ngayDen = "";
-        const dp = ngayDenText.match(/(\\d{2})\\/(\\d{2})\\/(\\d{4})/);
-        if (dp) ngayDen = \`\${dp[3]}-\${dp[2]}-\${dp[1]}T00:00:00\`;
+        const dp = ngayDenText.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+        if (dp) ngayDen = `${dp[3]}-${dp[2]}-${dp[1]}T00:00:00`;
         
         let ngayVanBan = "";
-        const dp2 = ngayVanBanText.match(/(\\d{2})\\/(\\d{2})\\/(\\d{4})/);
-        if (dp2) ngayVanBan = \`\${dp2[3]}-\${dp2[2]}-\${dp2[1]}\`;
+        const dp2 = ngayVanBanText.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+        if (dp2) ngayVanBan = `${dp2[3]}-${dp2[2]}-${dp2[1]}`;
 
         if (!soDen && !trichYeu) continue; // Dòng trống
 
@@ -283,7 +283,7 @@ async function startScraping(apiUrl, concurrency = 4, sendResponseCallback = nul
 
         // ---------- KIỂM TRA TRÙNG LẶP -----------
         updateStatus("Đang kiểm tra trùng lặp trên Server...");
-        addLog(\`🔍 Kiểm tra trùng lặp \${items.length} văn bản...\`, "info");
+        addLog(`🔍 Kiểm tra trùng lặp ${items.length} văn bản...`, "info");
         
         let rawDocs = items.map(item => ({ ...item.payload }));
         let skipCount = 0;
@@ -297,34 +297,34 @@ async function startScraping(apiUrl, concurrency = 4, sendResponseCallback = nul
             const checkData = await checkRes.json();
             
             if (checkData.success && checkData.newDocs) {
-                const newKeys = new Set(checkData.newDocs.map(d => \`\${(d.soHieu || d.soDen || '').trim()}|\${(d.trichYeu || '').trim()}\`));
+                const newKeys = new Set(checkData.newDocs.map(d => `${(d.soHieu || d.soDen || '').trim()}|${(d.trichYeu || '').trim()}`));
                 
                 // Lọc lại mảng items CHỈ GIỮ LẠI NHỮNG VĂN BẢN MỚI
                 items = items.filter(item => {
                     const d = item.payload;
-                    const docKey = \`\${(d.soHieu || d.soDen || '').trim()}|\${(d.trichYeu || '').trim()}\`;
+                    const docKey = `${(d.soHieu || d.soDen || '').trim()}|${(d.trichYeu || '').trim()}`;
                     return newKeys.has(docKey);
                 });
                 skipCount = checkData.skippedCount;
             }
         } catch (error) {
-            addLog(\`⚠️ Không thể kiểm tra trùng lặp (Mất kết nối). Tiến hành xử lý tất cả...\`, "warning");
+            addLog(`⚠️ Không thể kiểm tra trùng lặp (Mất kết nối). Tiến hành xử lý tất cả...`, "warning");
         }
         
         let docsPayload = [];
         let successCount = 0;
 
         if (items.length === 0) {
-            addLog(\`⏭️ Toàn bộ \${rawDocs.length} văn bản ĐÃ TỒN TẠI. Bỏ qua tải File.\`, "success");
+            addLog(`⏭️ Toàn bộ ${rawDocs.length} văn bản ĐÃ TỒN TẠI. Bỏ qua tải File.`, "success");
             updateProgress(90);
         } else {
             if (skipCount > 0) {
-                addLog(\`✅ Bỏ qua \${skipCount} văn bản cũ. Bắt đầu tải File cho \${items.length} văn bản mới...\`, "success");
+                addLog(`✅ Bỏ qua ${skipCount} văn bản cũ. Bắt đầu tải File cho ${items.length} văn bản mới...`, "success");
             } else {
-                addLog(\`✅ Tìm thấy \${items.length} văn bản mới. Bắt đầu tải File...\`, "success");
+                addLog(`✅ Tìm thấy ${items.length} văn bản mới. Bắt đầu tải File...`, "success");
             }
             
-            updateStatus(\`Đang tải File đính kèm (An toàn)...\`);
+            updateStatus(`Đang tải File đính kèm (An toàn)...`);
                 addLog(`✅ Tìm thấy ${items.length} văn bản mới. Bắt đầu tải File...`, "success");
             }
             
@@ -359,12 +359,12 @@ async function startScraping(apiUrl, concurrency = 4, sendResponseCallback = nul
             
             // TẢI FILE: Giới hạn 3 luồng
             await processWithConcurrency(allFileTasks, 3, async (task) => {
-                addLog(\`📥 Đang tải: \${task.f.fileName}...\`, "info");
+                addLog(`📥 Đang tải: ${task.f.fileName}...`, "info");
                 let b64 = await fetchFileAsBase64(task.f.href);
                 
                 // Retry
                 if (!b64) {
-                    addLog(\`⏳ Đang thử tải lại: \${task.f.fileName}...\`, "info");
+                    addLog(`⏳ Đang thử tải lại: ${task.f.fileName}...`, "info");
                     await new Promise(r => setTimeout(r, 1000));
                     b64 = await fetchFileAsBase64(task.f.href);
                 }
@@ -375,7 +375,7 @@ async function startScraping(apiUrl, concurrency = 4, sendResponseCallback = nul
                         base64Content: b64
                     });
                 } else {
-                    addLog(\`❌ Tải thất bại (Lỗi mạng từ Sở): \${task.f.fileName}\`, "error");
+                    addLog(`❌ Tải thất bại (Lỗi mạng từ Sở): ${task.f.fileName}`, "error");
                 }
                 filesDone++;
                 updateProgress(20 + Math.round((filesDone / allFileTasks.length) * 60));
@@ -383,7 +383,7 @@ async function startScraping(apiUrl, concurrency = 4, sendResponseCallback = nul
 
             updateStatus("Đang đẩy dữ liệu lên Google Sheets...");
             updateProgress(85);
-            addLog(\`🚀 Bắt đầu gửi \${docsPayload.length} văn bản lên Server...\`, "info");
+            addLog(`🚀 Bắt đầu gửi ${docsPayload.length} văn bản...`, "info");
 
             // 3. GỬI POST LÊN GOOGLE APPS SCRIPT (KIẾN TRÚC GỘP NHÓM ĐA LUỒNG - CONCURRENT BATCHING)
             const BATCH_SIZE = 5;
@@ -402,24 +402,27 @@ async function startScraping(apiUrl, concurrency = 4, sendResponseCallback = nul
             await processWithConcurrency(batches, concurrency, async (batch) => {
                 const i = batch.startIndex;
                 const batchDocs = batch.docs;
-                addLog(\`📤 Đang gửi nhóm văn bản thứ \${i + 1} đến \${i + batchDocs.length}...\`, "info");
+                addLog(`📤 Đang gửi nhóm văn bản thứ ${i + 1} đến ${i + batchDocs.length}...`, "info");
                 
                 try {
-                    const bodyJson = JSON.stringify({ action: "sync_docs", docs: batchDocs });
                     let apiResponse = null;
                     
                     // CƠ CHẾ TỰ ĐỘNG THỬ LẠI (RETRY) 3 LẦN TRÁNH RỚT MẠNG
                     for (let retry = 0; retry < 3; retry++) {
                         try {
-                            apiResponse = await fetch(apiUrl, {
-                                method: "POST",
-                                body: bodyJson,
-                                headers: { "Content-Type": "text/plain;charset=utf-8" }
+                            apiResponse = await new Promise((resolve, reject) => {
+                                chrome.runtime.sendMessage({ action: 'SYNC_DATA', data: batchDocs }, (response) => {
+                                    if (chrome.runtime.lastError) {
+                                        reject(new Error(chrome.runtime.lastError.message));
+                                    } else {
+                                        resolve(response);
+                                    }
+                                });
                             });
                             break; // Thành công thì thoát vòng lặp Retry
                         } catch (fetchErr) {
                             if (retry < 2) {
-                                addLog(\`⏳ Máy chủ bận, đang thử gửi lại nhóm \${i + 1}... lần \${retry + 1}\`, "info");
+                                addLog(`⏳ Máy chủ bận, đang thử gửi lại nhóm ${i + 1}... lần ${retry + 1}`, "info");
                                 await new Promise(r => setTimeout(r, 4000));
                             } else {
                                 throw fetchErr;
@@ -427,32 +430,20 @@ async function startScraping(apiUrl, concurrency = 4, sendResponseCallback = nul
                         }
                     }
 
-                    const responseText = await apiResponse.text();
-                    let responseData;
-                    try {
-                        responseData = JSON.parse(responseText);
-                    } catch (parseErr) {
-                        addLog(\`❌ Lỗi phản hồi từ Google (Không phải JSON)\`, "error");
-                        return; // Return để processWithConcurrency tiếp tục với nhóm khác
-                    }
-
-                    if (responseData.success) {
-                        successCount += responseData.created;
-                        skipCount += responseData.skipped;
-                        addLog(\`✅ Nhóm \${i + 1} đến \${i + batchDocs.length} xử lý xong! Đã tạo: \${responseData.created}, Bỏ qua: \${responseData.skipped}\`, "success");
+                    if (apiResponse && apiResponse.success) {
+                        successCount += batchDocs.length;
+                        addLog(`✅ Nhóm ${i + 1} đến ${i + batchDocs.length} xử lý xong (Đã chuyển Web App)!`, "success");
                     } else {
-                        addLog(\`❌ Google Script Error: \${responseData.message}\`, "error");
+                        addLog(`❌ Gửi Web App thất bại`, "error");
                     }
                 } catch (netErr) {
-                    addLog(\`❌ Lỗi mạng khi gửi nhóm \${i + 1}: \${netErr.message}\`, "error");
+                    addLog(`❌ Lỗi mạng khi gửi nhóm ${i + 1}: ${netErr.message}`, "error");
                 }
                 
                 docsSent += batchDocs.length;
                 updateProgress(85 + Math.round((docsSent / docsPayload.length) * 15));
             });
-        }
-
-        addLog(\`✅ Xong trang hiện tại: Thêm mới \${successCount} VB. Bỏ qua \${skipCount} VB cũ.\`, "success");
+        addLog(`✅ Xong trang hiện tại: Thêm mới ${successCount} VB. Bỏ qua ${skipCount} VB cũ.`, "success");
 
         // ==========================================
         // TỰ ĐỘNG CHUYỂN TRANG (AUTO-PAGINATION) CHỐNG LẶP VÔ HẠN
@@ -464,7 +455,7 @@ async function startScraping(apiUrl, concurrency = 4, sendResponseCallback = nul
 
         if (isNextBtnValid) {
             updateStatus("Phát hiện có trang tiếp theo! Đang chuẩn bị chuyển trang...");
-            addLog(\`👉 Chuẩn bị lật sang trang tiếp theo sau 2 giây...\`, "info");
+            addLog(`👉 Chuẩn bị lật sang trang tiếp theo sau 2 giây...`, "info");
             
             // Lấy mẫu HTML của bảng dữ liệu hiện tại để so sánh. Tránh trường hợp bấm nút Next nhưng trang không thèm load (Lặp vô hạn).
             const mainTable = document.querySelector('.table-hover, table[id*="DataList"], table');
@@ -491,11 +482,11 @@ async function startScraping(apiUrl, concurrency = 4, sendResponseCallback = nul
                             window._ajaxCrawlTimeout = setTimeout(checkTableChanged, 1000);
                         } else {
                             // Chờ 20 giây rồi mà không có gì thay đổi -> Nút Click không có tác dụng -> Đã ở trang cuối.
-                            addLog(\`🏁 Đã click Trang Sau nhưng sau 20s dữ liệu không đổi (có thể đã ở trang cuối). Ngăn chặn lặp vô hạn.\`, "success");
+                            addLog(`🏁 Đã click Trang Sau nhưng sau 20s dữ liệu không đổi (có thể đã ở trang cuối). Ngăn chặn lặp vô hạn.`, "success");
                             sessionStorage.removeItem('QLVB_AUTO_CRAWL');
                             sessionStorage.removeItem('QLVB_CONCURRENCY');
                             updateProgress(100);
-                            updateStatus(\`🎉 HOÀN TẤT! Đã đồng bộ toàn bộ các trang.\`);
+                            updateStatus(`🎉 HOÀN TẤT! Đã đồng bộ toàn bộ các trang.`);
                         }
                     }
                 }
@@ -513,8 +504,8 @@ async function startScraping(apiUrl, concurrency = 4, sendResponseCallback = nul
             sessionStorage.removeItem('QLVB_AUTO_CRAWL');
             sessionStorage.removeItem('QLVB_CONCURRENCY');
             updateProgress(100);
-            updateStatus(\`🎉 HOÀN TẤT TOÀN BỘ CÁC TRANG! Đã đẩy xong.\`);
-            addLog(\`🏁 Không tìm thấy trang tiếp theo (đã đến trang cuối). Dừng tiến trình.\`, "success");
+            updateStatus(`🎉 HOÀN TẤT TOÀN BỘ CÁC TRANG! Đã đẩy xong.`);
+            addLog(`🏁 Không tìm thấy trang tiếp theo (đã đến trang cuối). Dừng tiến trình.`, "success");
             
             if (sendResponseCallback) {
                 sendResponseCallback({ 
@@ -529,8 +520,8 @@ async function startScraping(apiUrl, concurrency = 4, sendResponseCallback = nul
     } catch (err) {
         sessionStorage.removeItem('QLVB_AUTO_CRAWL');
         sessionStorage.removeItem('QLVB_CONCURRENCY');
-        updateStatus(\`❌ Lỗi hệ thống\`);
-        addLog(\`❌ Exception: \${err.toString()}\`, "error");
+        updateStatus(`❌ Lỗi hệ thống`);
+        addLog(`❌ Exception: ${err.toString()}`, "error");
         if (sendResponseCallback) sendResponseCallback({ success: false, error: err.toString() });
     }
 }
@@ -559,5 +550,80 @@ if (sessionStorage.getItem('QLVB_AUTO_CRAWL') === 'true') {
         }, 3000);
     }
 }
+
+// ==========================================
+// TẠO NÚT ĐỒNG BỘ NỔI TRÊN TRANG VNPT
+// ==========================================
+function injectFloatingButton() {
+    console.log("[QLVB Sync] Đang thử tạo nút nổi...");
+    // Tránh tạo nhiều lần
+    if (document.getElementById('qlvb-floating-sync-btn')) {
+        console.log("[QLVB Sync] Nút đã tồn tại.");
+        return;
+    }
+
+    const container = document.body || document.documentElement;
+    if (!container) {
+        console.log("[QLVB Sync] Không tìm thấy Body/HTML để chèn nút.");
+        return;
+    }
+
+    const btn = document.createElement('button');
+    btn.id = 'qlvb-floating-sync-btn';
+    btn.innerHTML = '🚀 Đồng bộ về Web App QLVB';
+    
+    // CSS cho nút nổi
+    btn.style.cssText = `
+        position: fixed !important;
+        bottom: 30px !important;
+        right: 30px !important;
+        z-index: 2147483647 !important;
+        background-color: #3b82f6 !important;
+        color: #ffffff !important;
+        border: none !important;
+        border-radius: 50px !important;
+        padding: 15px 25px !important;
+        font-size: 16px !important;
+        font-weight: bold !important;
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4) !important;
+        cursor: pointer !important;
+        transition: all 0.3s ease !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+    `;
+
+    btn.onmouseover = () => {
+        btn.style.transform = 'scale(1.05)';
+        btn.style.backgroundColor = '#2563eb';
+    };
+    btn.onmouseout = () => {
+        btn.style.transform = 'scale(1)';
+        btn.style.backgroundColor = '#3b82f6';
+    };
+
+    btn.onclick = () => {
+        console.log("[QLVB Sync] Bắt đầu đồng bộ từ nút nổi!");
+        // Gửi lệnh quét ngay lập tức
+        sessionStorage.setItem('QLVB_AUTO_CRAWL', 'true');
+        sessionStorage.setItem('QLVB_API_URL', 'none');
+        sessionStorage.setItem('QLVB_CONCURRENCY', '4');
+        startScraping('none', 4);
+    };
+
+    container.appendChild(btn);
+    console.log("[QLVB Sync] Đã chèn nút nổi thành công vào", container.tagName);
+}
+
+// Chạy hàm tạo nút liên tục 5 lần để đảm bảo không bị JS của trang ghi đè
+let injectAttempts = 0;
+const injectInterval = setInterval(() => {
+    if (injectAttempts >= 5) {
+        clearInterval(injectInterval);
+        return;
+    }
+    injectFloatingButton();
+    injectAttempts++;
+}, 1000);
 
 } // End of window.qlvbContentScriptInjected check

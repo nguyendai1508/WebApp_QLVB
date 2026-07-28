@@ -42,11 +42,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'REPORT_PROGRESS') {
         broadcastProgress('SYNC_PROGRESS', request.message, request.percent, request.logType);
     }
+    
+    // Nhận dữ liệu cào được và chuyển về Web App để xử lý lưu vào Firebase
+    if (request.action === 'SYNC_DATA') {
+        chrome.tabs.query({ url: ["*://qlvb.io.vn/*", "*://qlvbpr.io.vn/*", "*://localhost/*", "*://script.google.com/*", "*://*.script.googleusercontent.com/*"] }, (tabs) => {
+            for (const tab of tabs) {
+                chrome.tabs.sendMessage(tab.id, { 
+                    type: 'SYNC_DATA_PAYLOAD', 
+                    data: request.data
+                });
+            }
+        });
+        sendResponse({ success: true, message: 'Đã gửi tới Web App' });
+        return true;
+    }
 });
 
 // Hàm gửi tin nhắn tiến trình tới tất cả các tab Web App đang mở
 function broadcastProgress(type, message, percent = 0, logType = 'info') {
-    chrome.tabs.query({ url: ["*://qlvb.io.vn/*", "*://qlvbpr.io.vn/*", "*://localhost/*", "*://script.google.com/*"] }, (tabs) => {
+    chrome.tabs.query({ url: ["*://qlvb.io.vn/*", "*://qlvbpr.io.vn/*", "*://localhost/*", "*://script.google.com/*", "*://*.script.googleusercontent.com/*"] }, (tabs) => {
         for (const tab of tabs) {
             chrome.tabs.sendMessage(tab.id, { 
                 type: type, 

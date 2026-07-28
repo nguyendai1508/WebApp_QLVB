@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
-import { callBackend } from '@/utils/gas';
+import { api } from '@/services/api';
 import { ShieldCheck, Loader2 } from 'lucide-react';
 
 export function Login() {
@@ -16,7 +16,7 @@ export function Login() {
     setLoading(true);
 
     try {
-      const res = await callBackend('LOGIN', { username, password });
+      const res = await api.login({ username, password });
       if (res.success) {
         setUser(res.user);
         await initialize();

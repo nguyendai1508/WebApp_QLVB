@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, LogOut, PlusCircle, MessageCircle, RefreshCw } from 'lucide-react';
+import { api } from '@/services/api';
 import { useLocation } from 'react-router-dom';
 import { useAppStore } from '@/store/useAppStore';
 import { Modal } from './Modal';
@@ -39,7 +40,7 @@ export function Topbar() {
   const [syncStatus, setSyncStatus] = useState('');
 
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
+    const handleMessage = async (event: MessageEvent) => {
       const data = event.data;
       if (!data || !data.type) return;
 
@@ -47,6 +48,75 @@ export function Topbar() {
         setIsSyncing(true);
         if (data.message) setSyncStatus(data.message);
         if (data.percent !== undefined) setSyncProgress(data.percent);
+      } else if (data.type === 'SYNC_DATA_PAYLOAD') {
+        // Handle saving data to Firebase
+        try {
+            const batchDocs = data.data;
+            if (!batchDocs || !Array.isArray(batchDocs)) return;
+            
+            for (const doc of batchDocs) {
+                // Fetch staff to map names to IDs
+                const staffList = await api.getStaffList();
+                const getStaffId = (name: string) => {
+                    if (!name) return '';
+                    const cleanName = name.split('(')[0].trim().toLowerCase();
+                    const staff = staffList.find((s: any) => s.Full_Name?.toLowerCase() === cleanName);
+                    return staff ? staff.id : name;
+                };
+
+                const assigneeId = getStaffId(doc.Assignee);
+                
+                // Add doc to Firebase
+                const newDoc = await api.createIncomingDoc({
+                    Doc_ID: doc.Doc_ID,
+                    Sign_Number: doc.Sign_Number,
+                    Draft_Date: doc.Draft_Date,
+                    Summary: doc.Summary,
+                    Issuer: doc.Issuer,
+                    Assignee_ID: assigneeId,
+                    Deadline: doc.Deadline,
+                    Status: 'Đang xử lý',
+                    Note: doc.Note || '',
+                    Co_Assignees: doc.Co_Assignees || ''
+                });
+
+                // Auto generate primary task
+                if (assigneeId) {
+                    await api.createTask({
+                        Source: 'Văn bản đến',
+                        Linked_Doc_ID: newDoc.id,
+                        Category: 'Văn bản chỉ đạo',
+                        Priority: 'Bình thường',
+                        Status: 'Đang xử lý',
+                        Assignee_ID: assigneeId,
+                        Role: 'Chủ trì',
+                        Deadline: doc.Deadline || ''
+                    });
+                }
+
+                // Auto generate co-assignee tasks
+                if (doc.Co_Assignees) {
+                    const coAssigneesArr = doc.Co_Assignees.split('.').filter((x:string) => x.trim() !== '');
+                    for (const coName of coAssigneesArr) {
+                        const coId = getStaffId(coName.trim());
+                        if (coId) {
+                            await api.createTask({
+                                Source: 'Văn bản đến',
+                                Linked_Doc_ID: newDoc.id,
+                                Category: 'Văn bản chỉ đạo',
+                                Priority: 'Bình thường',
+                                Status: 'Đang xử lý',
+                                Assignee_ID: coId,
+                                Role: 'Phối hợp',
+                                Deadline: doc.Deadline || ''
+                            });
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Error saving sync data to Firebase", e);
+        }
       } else if (data.type === 'SYNC_COMPLETE') {
         setSyncStatus(data.message || 'Hoàn tất đồng bộ!');
         setSyncProgress(100);

@@ -18,9 +18,21 @@ window.addEventListener('message', (event) => {
     }
 });
 
-// Lắng nghe tín hiệu tiến trình từ Background Script và đẩy xuống React Web App
+// Lắng nghe tin nhắn từ Extension (background.js) và bắn vào DOM (Window) để React App nhận được
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === 'SYNC_PROGRESS' || request.type === 'SYNC_COMPLETE' || request.type === 'SYNC_ERROR') {
-        window.postMessage(request, '*');
+        window.postMessage({
+            type: request.type,
+            message: request.message,
+            percent: request.percent,
+            logType: request.logType
+        }, "*");
+    }
+    
+    if (request.type === 'SYNC_DATA_PAYLOAD') {
+        window.postMessage({
+            type: 'SYNC_DATA_PAYLOAD',
+            data: request.data
+        }, "*");
     }
 });

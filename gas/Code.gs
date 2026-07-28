@@ -45,10 +45,10 @@ function getFolder() {
 
 // Hỗ trợ CORS cho API
 function setCORS(response) {
-  return response
-    .setHeader('Access-Control-Allow-Origin', '*')
-    .setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-    .setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  // TextOutput in Google Apps Script does NOT have setHeader!
+  // Google automatically handles CORS for Apps Script Web Apps.
+  // DO NOT CALL setHeader on TextOutput.
+  return response;
 }
 
 // Xử lý Preflight request

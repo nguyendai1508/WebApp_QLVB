@@ -77,11 +77,11 @@ export function Catalogs() {
     if (confirm(`Bạn có chắc muốn xóa "${value}" khỏi danh mục "${type}" không?`)) {
       try {
         setIsLoading(true);
-        const res = await api.deleteSetupData({ type, value });
+        const res: any = await api.deleteSetupData({ type, value });
         if (res.success) {
           await initialize();
         } else {
-          alert('Lỗi: ' + res.message);
+          alert('Lỗi: ' + (res.message || ''));
         }
       } catch (error) {
         alert('Có lỗi xảy ra!');
@@ -96,7 +96,7 @@ export function Catalogs() {
     
     try {
       setIsLoading(true);
-      let res;
+      let res: any;
       if (modalMode === 'add') {
         res = await api.addSetupData({ type: currentType, value: inputValue.trim() });
       } else {
@@ -107,7 +107,7 @@ export function Catalogs() {
         setIsModalOpen(false);
         await initialize();
       } else {
-        alert('Lỗi: ' + res.message);
+        alert('Lỗi: ' + (res.message || ''));
       }
     } catch (error) {
       alert('Có lỗi xảy ra!');

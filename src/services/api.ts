@@ -2,7 +2,7 @@
 import { db } from './firebase';
 import { ref, get, set, push, update, remove } from 'firebase/database';
 
-export const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbyJybqKmvU5kRY-2_QoU_AtggLbL7jVU_A_U2mhBqo34XI0qeg2375b754LilQ1NI9SLA/exec';
+export const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbw6Eff-tF4pYYi_-KBja5BoS7JHUUfKBIVNzpXmyDz7KqNEIDfp7Wh4Mfb_TtkyRGnMTg/exec';
 
 type ApiResponse = { id?: string; success: boolean; message?: string; [key: string]: any };
 

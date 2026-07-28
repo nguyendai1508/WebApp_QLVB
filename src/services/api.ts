@@ -39,7 +39,10 @@ export const api = {
   // Queries
   getSetupData: async () => {
     const snapshot = await get(ref(db, 'setup'));
-    return snapshot.exists() ? snapshot.val() : {};
+    if (!snapshot.exists()) return [];
+    const val = snapshot.val();
+    if (Array.isArray(val)) return val.filter(Boolean);
+    return Object.values(val).filter((v: any) => v && v.Type && v.Value);
   },
   getStaffList: () => getList('staff'),
   getIncomingDocs: () => getList('incomingDocs'),
@@ -69,24 +72,25 @@ export const api = {
   
   // Setup / Catalogs
   addSetupData: async (data: any) => {
-    const current = await api.getSetupData();
-    const updated = { ...current };
-    for (const key of Object.keys(data)) {
-        if (Array.isArray(updated[key])) {
-            updated[key] = [...updated[key], ...data[key]];
-        } else {
-            updated[key] = data[key];
-        }
-    }
-    await set(ref(db, 'setup'), updated);
-    return updated;
+    const list = await api.getSetupData();
+    list.push({ Type: data.type, Value: data.value });
+    await set(ref(db, 'setup'), list);
+    return { success: true };
   },
   updateSetupData: async (data: any) => {
-    await update(ref(db, 'setup'), data);
-    return data;
+    const list = await api.getSetupData();
+    const idx = list.findIndex((c: any) => c.Type === data.type && c.Value === data.oldValue);
+    if (idx !== -1) {
+       list[idx].Value = data.newValue;
+       await set(ref(db, 'setup'), list);
+       return { success: true };
+    }
+    return { success: false, message: 'Không tìm thấy' };
   },
   deleteSetupData: async (data: any): Promise<ApiResponse> => {
-    // TODO: implement detailed setup deletion if needed
+    const list = await api.getSetupData();
+    const newList = list.filter((c: any) => !(c.Type === data.type && c.Value === data.value));
+    await set(ref(db, 'setup'), newList);
     return { success: true, message: 'Thành công' };
   },
 
@@ -111,17 +115,21 @@ export const api = {
 
   // Zalo Webhook
   sendZalo: async (phone: string, message: string, type: string) => {
-    const response = await fetch(WEBHOOK_URL, {
+    try {
+      const response = await fetch(WEBHOOK_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             action: 'send_zalo',
             phone,
             message,
             type
         })
-    });
-    return response.json();
+      });
+      return response.json();
+    } catch (error) {
+      return { success: false };
+    }
   },
 
   // Auth

@@ -101,11 +101,32 @@ export const useAppStore = create<AppState>((set) => ({
 
       set({
         catalogs: catalogsData || [],
-        staff: staffData || [],
+        staff: (staffData || []).map((s: any) => ({
+            ...s,
+            Staff_ID: s.id || s.Staff_ID,
+            Full_Name: s.fullName || s.Full_Name,
+            Role: s.role || s.Role,
+            Department: s.department || s.Department,
+            Status: s.status || s.Status,
+            Phone: s.phone || s.Phone,
+            Email: s.email || s.Email,
+            Direct_Manager: s.manager || s.Direct_Manager,
+            Notes: s.notes || s.Notes
+        })),
         incomingDocs: incomingData ? processStatus(incomingData) : [],
         outgoingDocs: outgoingData || [],
         tasks: tasksData ? processStatus(tasksData) : [],
-        users: usersData || [],
+        users: (usersData || []).map((u: any) => ({
+            ...u,
+            'Mã người dùng': u.id || u['Mã người dùng'] || '',
+            'Tên đăng nhập': u.username || u['Tên đăng nhập'] || '',
+            'Mật khẩu': u.password || u['Mật khẩu'] || '',
+            'Mã cán bộ': u.staffId || u['Mã cán bộ'] || '',
+            'Họ tên cán bộ': u.fullName || u['Họ tên cán bộ'] || '',
+            'Tên người dùng': u.displayName || u['Tên người dùng'] || '',
+            'Phạm vi dữ liệu': u.dataScope || u['Phạm vi dữ liệu'] || '',
+            'Phân quyền': u.role || u['Phân quyền'] || ''
+        })),
         isInitialized: true
       });
     } catch (error) {

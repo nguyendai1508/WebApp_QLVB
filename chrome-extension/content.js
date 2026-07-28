@@ -35,7 +35,16 @@ function createOverlay() {
     `;
     (document.body || document.documentElement).appendChild(overlay);
     
-    document.getElementById("qlvb-sync-close").addEventListener("click", () => overlay.style.display = "none");
+    document.getElementById("qlvb-sync-close").addEventListener("click", () => {
+        overlay.style.display = "none";
+        window._qlvbStopRequested = true;
+        sessionStorage.removeItem('QLVB_AUTO_CRAWL');
+        sessionStorage.removeItem('QLVB_CONCURRENCY');
+        sessionStorage.removeItem('QLVB_MAX_PAGES');
+        sessionStorage.removeItem('QLVB_CURRENT_PAGE');
+        addLog(`🛑 Đã yêu cầu dừng đồng bộ! Quá trình sẽ dừng sau giây lát.`, "error");
+        updateStatus(`🛑 Đã dừng đồng bộ.`);
+    });
     
     // Thêm chức năng kéo thả (Draggable)
     const header = document.getElementById("qlvb-sync-header");
@@ -227,100 +236,101 @@ async function processWithConcurrency(items, limit, asyncFn) {
     return Promise.all(results);
 }
 
-// Hàm thực thi Cào và Đồng bộ
+window._qlvbStopRequested = false;
+
+// Hàm cào chính
 async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendResponseCallback = null) {
+    if (window._qlvbStopRequested) return;
+    createOverlay();
+    updateStatus("Bắt đầu quét danh sách...");
+    updateProgress(10);
+    addLog("🔍 Đang đọc HTML bảng dữ liệu hiện tại...", "info");
+
+    // 1. Quét DOM
+    let items = [];
     try {
-        createOverlay();
-        updateStatus("Bắt đầu quét danh sách...");
-        updateProgress(10);
-        addLog("🔍 Đang đọc HTML bảng dữ liệu hiện tại...", "info");
+        items = scrapeCurrentPage();
+    } catch (e) {
+        addLog("❌ Lỗi quét DOM: " + e.message, "error");
+        if (sendResponseCallback) sendResponseCallback({ success: false, error: e.message });
+        sessionStorage.removeItem('QLVB_AUTO_CRAWL');
+        return;
+    }
+    
+    if (items.length === 0) {
+        addLog("❌ Lỗi: Không trích xuất được dòng văn bản nào.", "error");
+        if (sendResponseCallback) sendResponseCallback({ success: false, error: "Không có dữ liệu." });
+        sessionStorage.removeItem('QLVB_AUTO_CRAWL');
+        return;
+    }
 
-        // 1. Quét DOM
-        let items = [];
-        try {
-            items = scrapeCurrentPage();
-        } catch (e) {
-            addLog("❌ Lỗi quét DOM: " + e.message, "error");
-            if (sendResponseCallback) sendResponseCallback({ success: false, error: e.message });
-            sessionStorage.removeItem('QLVB_AUTO_CRAWL');
-            return;
-        }
+    // ---------- KIỂM TRA TRÙNG LẶP DỰA TRÊN DỮ LIỆU TỪ WEB APP -----------
+    updateStatus("Đang đối chiếu dữ liệu...");
+    addLog(`🔍 Kiểm tra trùng lặp ${items.length} văn bản...`, "info");
+    
+    let rawDocs = items.map(item => ({ ...item.payload }));
+    let skipCount = 0;
+    
+    if (existingKeys && existingKeys.length > 0) {
+        const keysSet = new Set(existingKeys);
+        const originalLength = items.length;
         
-        if (items.length === 0) {
-            addLog("❌ Lỗi: Không trích xuất được dòng văn bản nào.", "error");
-            if (sendResponseCallback) sendResponseCallback({ success: false, error: "Không có dữ liệu." });
-            sessionStorage.removeItem('QLVB_AUTO_CRAWL');
-            return;
-        }
+        // Lọc lại mảng items CHỈ GIỮ LẠI NHỮNG VĂN BẢN MỚI
+        items = items.filter(item => {
+            const d = item.payload;
+            const docKey = `${(d.soHieu || d.soDen || '').trim()}|${(d.trichYeu || '').trim()}`;
+            return !keysSet.has(docKey);
+        });
+        skipCount = originalLength - items.length;
+    }
+    
+    let docsPayload = [];
+    let successCount = 0;
 
-        // ---------- KIỂM TRA TRÙNG LẶP DỰA TRÊN DỮ LIỆU TỪ WEB APP -----------
-        updateStatus("Đang đối chiếu dữ liệu...");
-        addLog(`🔍 Kiểm tra trùng lặp ${items.length} văn bản...`, "info");
-        
-        let rawDocs = items.map(item => ({ ...item.payload }));
-        let skipCount = 0;
-        
-        if (existingKeys && existingKeys.length > 0) {
-            const keysSet = new Set(existingKeys);
-            const originalLength = items.length;
-            
-            // Lọc lại mảng items CHỈ GIỮ LẠI NHỮNG VĂN BẢN MỚI
-            items = items.filter(item => {
-                const d = item.payload;
-                const docKey = `${(d.soHieu || d.soDen || '').trim()}|${(d.trichYeu || '').trim()}`;
-                return !keysSet.has(docKey);
-            });
-            skipCount = originalLength - items.length;
-        }
-        
-        let docsPayload = [];
-        let successCount = 0;
-
-        if (items.length === 0) {
-            addLog(`⏭️ Toàn bộ ${rawDocs.length} văn bản ĐÃ TỒN TẠI. Bỏ qua tải File.`, "success");
-            updateProgress(90);
+    if (items.length === 0) {
+        addLog(`⏭️ Toàn bộ ${rawDocs.length} văn bản ĐÃ TỒN TẠI. Bỏ qua tải File.`, "success");
+        updateProgress(90);
+    } else {
+        if (skipCount > 0) {
+            addLog(`✅ Bỏ qua ${skipCount} văn bản cũ. Bắt đầu tải File cho ${items.length} văn bản mới...`, "success");
         } else {
-            if (skipCount > 0) {
-                addLog(`✅ Bỏ qua ${skipCount} văn bản cũ. Bắt đầu tải File cho ${items.length} văn bản mới...`, "success");
-            } else {
-                addLog(`✅ Tìm thấy ${items.length} văn bản mới. Bắt đầu tải File...`, "success");
-            }
-            
-            updateStatus(`Đang tải File đính kèm (An toàn)...`);
-                addLog(`✅ Tìm thấy ${items.length} văn bản mới. Bắt đầu tải File...`, "success");
-            }
-            
-            updateStatus(`Đang tải File đính kèm (An toàn)...`);
-            updateProgress(20);
+            addLog(`✅ Tìm thấy ${items.length} văn bản mới. Bắt đầu tải File...`, "success");
+        }
+        
+        updateStatus(`Đang tải File đính kèm (An toàn)...`);
+        updateProgress(20);
 
-            // Khởi tạo mảng docsPayload
-            docsPayload = items.map(item => ({ ...item.payload, files: [] }));
-            
-            // Gom tất cả các tác vụ tải file và lấy thông tin Đồng xử lý
-            const allFileTasks = [];
-            for (let i = 0; i < items.length; i++) {
-                if (items[i].doc_id) {
-                    addLog(`Đang tìm link ẩn và Đồng xử lý cho văn bản ${items[i].payload.soDen}...`, "info");
-                    
-                    // Lấy files
-                    const fileUrls = await getFilesForDoc(items[i].doc_id);
-                    for (const f of fileUrls) {
-                        allFileTasks.push({ itemIndex: i, f: f });
-                    }
-                    
-                    // Lấy Đồng xử lý
-                    const coAssignees = await getCoAssigneesForDoc(items[i].doc_id);
-                    if (coAssignees && coAssignees.length > 0) {
-                        docsPayload[i].coAssignee = coAssignees.join(', ');
-                        addLog(`👥 Đã tìm thấy ${coAssignees.length} Đồng xử lý.`, "success");
-                    }
+        // Khởi tạo mảng docsPayload
+        docsPayload = items.map(item => ({ ...item.payload, files: [] }));
+        
+        // Gom tất cả các tác vụ tải file và lấy thông tin Đồng xử lý
+        const fileTasks = [];
+        for (let i = 0; i < items.length; i++) {
+            if (window._qlvbStopRequested) return;
+            if (items[i].doc_id) {
+                addLog(`Đang tìm link ẩn và Đồng xử lý cho văn bản ${items[i].payload.soDen}...`, "info");
+                
+                // Lấy files
+                const fileUrls = await getFilesForDoc(items[i].doc_id);
+                for (const f of fileUrls) {
+                    fileTasks.push({ itemIndex: i, f: f });
+                }
+                
+                // Lấy Đồng xử lý
+                const coAssignees = await getCoAssigneesForDoc(items[i].doc_id);
+                if (coAssignees && coAssignees.length > 0) {
+                    docsPayload[i].coAssignee = coAssignees.join(', ');
+                    addLog(`👥 Đã tìm thấy ${coAssignees.length} Đồng xử lý.`, "success");
                 }
             }
+        }
 
-            let filesDone = 0;
-            
-            // TẢI FILE: Giới hạn 3 luồng
-            await processWithConcurrency(allFileTasks, 3, async (task) => {
+        let filesDownloaded = 0;
+        
+        // TẢI FILE: Giới hạn 2 luồng
+        await processWithConcurrency(fileTasks, 2, async (task) => {
+            if (window._qlvbStopRequested) return;
+            try {
                 addLog(`📥 Đang tải: ${task.f.fileName}...`, "info");
                 let b64 = await fetchFileAsBase64(task.f.href);
                 
@@ -339,19 +349,16 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                 } else {
                     addLog(`❌ Tải thất bại (Lỗi mạng từ Sở): ${task.f.fileName}`, "error");
                 }
-                filesDone++;
-                updateProgress(20 + Math.round((filesDone / allFileTasks.length) * 60));
+                filesDownloaded++;
+                updateProgress(20 + Math.round((filesDownloaded / fileTasks.length) * 60));
             });
 
-            updateStatus("Đang đẩy dữ liệu lên Google Sheets...");
+            updateStatus("Đang đẩy dữ liệu sang Web App...");
             updateProgress(85);
             addLog(`🚀 Bắt đầu gửi ${docsPayload.length} văn bản...`, "info");
 
-            // 3. GỬI POST LÊN GOOGLE APPS SCRIPT (KIẾN TRÚC GỘP NHÓM ĐA LUỒNG - CONCURRENT BATCHING)
             const BATCH_SIZE = 5;
             let docsSent = 0;
-
-            // Tạo danh sách các gói hàng (Batches)
             const batches = [];
             for (let i = 0; i < docsPayload.length; i += BATCH_SIZE) {
                 batches.push({
@@ -360,8 +367,8 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                 });
             }
 
-            // Gửi các gói hàng cùng một lúc lên Google (Dựa vào số luồng tùy chỉnh)
             await processWithConcurrency(batches, concurrency, async (batch) => {
+                if (window._qlvbStopRequested) return;
                 const i = batch.startIndex;
                 const batchDocs = batch.docs;
                 addLog(`📤 Đang gửi nhóm văn bản thứ ${i + 1} đến ${i + batchDocs.length}...`, "info");
@@ -415,8 +422,23 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
         
         const isNextBtnValid = nextBtn && !nextBtn.hasAttribute('disabled') && !nextBtn.className.includes('disabled') && !nextBtn.parentElement.className.includes('disabled');
 
-        if (isNextBtnValid) {
-            updateStatus("Phát hiện có trang tiếp theo! Đang chuẩn bị chuyển trang...");
+        if (isNextBtnValid && !window._qlvbStopRequested) {
+            
+            // KIỂM TRA GIỚI HẠN TRANG (PAGE LIMITS)
+            let maxPages = parseInt(sessionStorage.getItem('QLVB_MAX_PAGES') || '2'); // Mặc định 2 trang
+            let currentPage = parseInt(sessionStorage.getItem('QLVB_CURRENT_PAGE') || '1');
+            
+            if (currentPage >= maxPages) {
+                 addLog(`🏁 Đã đạt giới hạn ${maxPages} trang. Dừng lật trang.`, "success");
+                 sessionStorage.removeItem('QLVB_AUTO_CRAWL');
+                 updateProgress(100);
+                 updateStatus(`🎉 HOÀN TẤT! Đã đồng bộ ${currentPage} trang.`);
+                 return;
+            }
+            
+            sessionStorage.setItem('QLVB_CURRENT_PAGE', (currentPage + 1).toString());
+            
+            updateStatus(`Phát hiện có trang tiếp theo (đang ở trang ${currentPage}/${maxPages === 9999 ? 'Tất cả' : maxPages})! Đang chuẩn bị chuyển...`);
             addLog(`👉 Chuẩn bị lật sang trang tiếp theo sau 2 giây...`, "info");
             
             // Hàm tìm bảng dữ liệu chính xác
@@ -590,11 +612,16 @@ function injectFloatingButton() {
     };
 
     btn.onclick = () => {
+        let isSyncAll = confirm("Bạn có muốn ĐỒNG BỘ TẤT CẢ CÁC TRANG không?\n\n- Chọn OK: Quét toàn bộ dữ liệu từ đầu đến cuối (Mất nhiều thời gian).\n- Chọn Cancel (Hủy): Chỉ quét 2 trang đầu tiên (Dùng để cập nhật nhanh).");
+        let maxPages = isSyncAll ? 9999 : 2;
+        
         console.log("[QLVB Sync] Bắt đầu đồng bộ từ nút nổi!");
-        // Gửi lệnh quét ngay lập tức
+        window._qlvbStopRequested = false;
         sessionStorage.setItem('QLVB_AUTO_CRAWL', 'true');
         sessionStorage.setItem('QLVB_API_URL', 'none');
         sessionStorage.setItem('QLVB_CONCURRENCY', '4');
+        sessionStorage.setItem('QLVB_MAX_PAGES', maxPages.toString());
+        sessionStorage.setItem('QLVB_CURRENT_PAGE', '1');
         startScraping('none', 4);
     };
 

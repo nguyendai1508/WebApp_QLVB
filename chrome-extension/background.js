@@ -1,6 +1,6 @@
 // background.js
 
-const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbwh8G4ZN-ye5vey26m2JuTus93L63pfMFCoUoyX18kMRnPU6rZbuQCoSYuayFSFTYnl/exec";
+const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbw6Eff-tF4pYYi_-KBja5BoS7JHUUfKBIVNzpXmyDz7KqNEIDfp7Wh4Mfb_TtkyRGnMTg/exec";
 const DEFAULT_CONCURRENCY = 4;
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -85,11 +85,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                             try {
                                 const uploadRes = await fetch(DEFAULT_API_URL, {
                                     method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
+                                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                                     body: JSON.stringify({
+                                        action: 'upload_file',
                                         fileName: f.fileName,
                                         mimeType: '',
-                                        base64Content: f.base64Content
+                                        fileData: f.base64Content
                                     })
                                 }).then(r => r.json());
                                 

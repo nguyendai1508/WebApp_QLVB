@@ -71,111 +71,25 @@ async function fetchFileAsBase64(url) {
     } catch { return null; }
 }
 
-// Hàm tiêm script để lấy link file thực sự từ API nội bộ VNPT
+// Hàm gửi yêu cầu lấy link file thực sự tới background (bypass CSP)
 function getFilesForDoc(doc_id) {
     return new Promise((resolve) => {
-        const listener = (event) => {
-            if (event.source !== window) return;
-            if (event.data && event.data.type === 'QLVB_FILE_DATA' && event.data.doc_id === doc_id) {
-                window.removeEventListener('message', listener);
-                resolve(event.data.data);
-            }
-        };
-        window.addEventListener('message', listener);
+        chrome.runtime.sendMessage({ 
+            action: 'EVAL_IN_MAIN_WORLD', 
+            doc_id: doc_id,
+            scriptType: 'getFiles'
+        }, (response) => {
+            resolve(response || []);
+        });
         
-        const script = document.createElement('script');
-        script.textContent = `
-            try {
-                if (typeof NEORemoting !== 'undefined' && typeof Base64_Coder !== 'undefined') {
-                    NEORemoting.getRSet('qlvb.van_ban_den.getFileAttachLst("' + '${doc_id}' + '",0)', function(data) {
-                        let urls = [];
-                        if (data && data !== '[]' && data !== 'null') {
-                            try {
-                                var a = eval(data);
-                                for(var i=0; i<a.length; i++) {
-                                    var type = 'vb';
-                                    var path = a[i].hdd_file;
-                                    var name = a[i].name;
-                                    if(!path.includes('upload/')) {
-                                        path = Base64_Coder.encode(path);
-                                    }
-                                    var url = "/qlvbdh_dnigov/smartoffice/jbm/download.jsp?5E1XCBS.=" + encodeURIComponent(Base64_Coder.encode(name)) + "&5FpXTEW.=" + path + "&TFbm5O..=" + Base64_Coder.encode(type);
-                                    urls.push({ fileName: name, href: window.location.origin + url });
-                                }
-                            } catch(e) {}
-                        }
-                        window.postMessage({ type: 'QLVB_FILE_DATA', doc_id: '${doc_id}', data: urls }, '*');
-                    });
-                } else {
-                    window.postMessage({ type: 'QLVB_FILE_DATA', doc_id: '${doc_id}', data: [] }, '*');
-                }
-            } catch(e) {
-                window.postMessage({ type: 'QLVB_FILE_DATA', doc_id: '${doc_id}', data: [] }, '*');
-            }
-        `;
-        (document.body || document.documentElement).appendChild(script);
-        setTimeout(() => script.remove(), 1000);
-        
-                        // Timeout after 5s
-        setTimeout(() => {
-            window.removeEventListener('message', listener);
-            resolve([]);
-        }, 5000);
+        // Bắt lỗi timeout an toàn (đề phòng extension hỏng)
+        setTimeout(() => resolve([]), 5000);
     });
 }
 
-// Hàm tiêm script để lấy danh sách đồng xử lý từ Nhật ký
+// Hàm gửi yêu cầu lấy danh sách đồng xử lý tới background (bypass CSP)
 function getCoAssigneesForDoc(doc_id) {
     return new Promise((resolve) => {
-        const listener = (event) => {
-            if (event.source !== window) return;
-            if (event.data && event.data.type === 'QLVB_CO_ASSIGNEE_DATA' && event.data.doc_id === doc_id) {
-                window.removeEventListener('message', listener);
-                resolve(event.data.data);
-            }
-        };
-        window.addEventListener('message', listener);
-        
-        const script = document.createElement('script');
-        script.textContent = `
-            try {
-                if (typeof DataRemoting !== 'undefined') {
-                    DataRemoting.getDoc('qlvb.van_ban_den.getDcmTrackActivitiLog("' + '${doc_id}' + '","QLVB_DNI_UBXPHURIENG.","","","1","' + '${doc_id}' + '")', function(htmlData) {
-                        let coAssignees = [];
-                        if (htmlData) {
-                            const match = htmlData.match(/&#272;&#7891;ng x&#7917; l&#253;: (.*?)<\\/p>/);
-                            if (match && match[1]) {
-                                const namesHtml = match[1];
-                                const spanRegex = /<span class="c-blue">([^<]+)<\\/span>/g;
-                                let m;
-                                while ((m = spanRegex.exec(namesHtml)) !== null) {
-                                    let name = m[1].trim();
-                                    name = name.replace(/\\s*\\([^)]+\\)\\.?/g, '').trim();
-                                    const txt = document.createElement("textarea");
-                                    txt.innerHTML = name;
-                                    coAssignees.push(txt.value);
-                                }
-                            }
-                        }
-                        window.postMessage({ type: 'QLVB_CO_ASSIGNEE_DATA', doc_id: '${doc_id}', data: coAssignees }, '*');
-                    });
-                } else {
-                    window.postMessage({ type: 'QLVB_CO_ASSIGNEE_DATA', doc_id: '${doc_id}', data: [] }, '*');
-                }
-            } catch(e) {
-                window.postMessage({ type: 'QLVB_CO_ASSIGNEE_DATA', doc_id: '${doc_id}', data: [] }, '*');
-            }
-        `;
-        (document.body || document.documentElement).appendChild(script);
-        setTimeout(() => script.remove(), 1000);
-        
-        setTimeout(() => {
-            window.removeEventListener('message', listener);
-            resolve([]);
-        }, 5000);
-    });
-}
-
 
 
 // Bóc tách bảng dữ liệu theo cấu trúc VNPT Đồng Nai

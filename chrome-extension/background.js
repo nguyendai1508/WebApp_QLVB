@@ -57,6 +57,93 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ success: true, message: 'Đã gửi tới Web App' });
         return true;
     }
+    if (request.action === 'EVAL_IN_MAIN_WORLD') {
+        const tabId = sender.tab.id;
+        
+        if (request.scriptType === "getFiles") {
+            chrome.scripting.executeScript({
+                target: { tabId: tabId },
+                world: "MAIN",
+                func: (doc_id) => {
+                    return new Promise((resolve) => {
+                        try {
+                            if (typeof NEORemoting !== 'undefined' && typeof Base64_Coder !== 'undefined') {
+                                NEORemoting.getRSet('qlvb.van_ban_den.getFileAttachLst("' + doc_id + '",0)', function(data) {
+                                    let urls = [];
+                                    if (data && data !== '[]' && data !== 'null') {
+                                        try {
+                                            var a = eval(data);
+                                            for(var i=0; i<a.length; i++) {
+                                                var type = 'vb';
+                                                var path = a[i].hdd_file;
+                                                var name = a[i].name;
+                                                if(!path.includes('upload/')) {
+                                                    path = Base64_Coder.encode(path);
+                                                }
+                                                var url = "/qlvbdh_dnigov/smartoffice/jbm/download.jsp?5E1XCBS.=" + encodeURIComponent(Base64_Coder.encode(name)) + "&5FpXTEW.=" + path + "&TFbm5O..=" + Base64_Coder.encode(type);
+                                                urls.push({ fileName: name, href: window.location.origin + url });
+                                            }
+                                        } catch(e) {}
+                                    }
+                                    resolve(urls);
+                                });
+                            } else {
+                                resolve([]);
+                            }
+                        } catch(e) {
+                            resolve([]);
+                        }
+                    });
+                },
+                args: [request.doc_id]
+            }, (results) => {
+                sendResponse(results && results[0] ? results[0].result : []);
+            });
+            return true;
+        }
+        
+        if (request.scriptType === "getCoAssignees") {
+            chrome.scripting.executeScript({
+                target: { tabId: tabId },
+                world: "MAIN",
+                func: (doc_id) => {
+                    return new Promise((resolve) => {
+                        try {
+                            if (typeof DataRemoting !== 'undefined') {
+                                DataRemoting.getDoc('qlvb.van_ban_den.getDcmTrackActivitiLog("' + doc_id + '","QLVB_DNI_UBXPHURIENG.","","","1","' + doc_id + '")', function(htmlData) {
+                                    let coAssignees = [];
+                                    if (htmlData) {
+                                        const match = htmlData.match(/&#272;&#7891;ng x&#7917; l&#253;: (.*?)<\/p>/);
+                                        if (match && match[1]) {
+                                            const namesHtml = match[1];
+                                            const spanRegex = /<span class="c-blue">([^<]+)<\/span>/g;
+                                            let m;
+                                            while ((m = spanRegex.exec(namesHtml)) !== null) {
+                                                let name = m[1].trim();
+                                                name = name.replace(/\s*\([^)]+\)\.?/g, '').trim();
+                                                const txt = document.createElement("textarea");
+                                                txt.innerHTML = name;
+                                                coAssignees.push(txt.value);
+                                            }
+                                        }
+                                    }
+                                    resolve(coAssignees);
+                                });
+                            } else {
+                                resolve([]);
+                            }
+                        } catch(e) {
+                            resolve([]);
+                        }
+                    });
+                },
+                args: [request.doc_id]
+            }, (results) => {
+                sendResponse(results && results[0] ? results[0].result : []);
+            });
+            return true;
+        }
+    }
 });
 
 // Hàm gửi tin nhắn tiến trình tới tất cả các tab Web App đang mở

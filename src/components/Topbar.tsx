@@ -48,10 +48,10 @@ export function Topbar() {
         setIsSyncing(true);
         if (data.message) setSyncStatus(data.message);
         if (data.percent !== undefined) setSyncProgress(data.percent);
-      } else if (data.type === 'SYNC_DATA_PAYLOAD') {
+      } else if (data.type === 'SYNC_DOCS_BATCH') {
         // Handle saving data to Firebase
         try {
-            const batchDocs = data.data;
+            const batchDocs = data.payload;
             if (!batchDocs || !Array.isArray(batchDocs)) return;
             
             const existingDocs = await api.getIncomingDocs();

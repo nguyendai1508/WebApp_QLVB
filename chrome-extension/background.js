@@ -77,9 +77,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     return username;
                 };
 
-                const getStaffId = async (name) => {
-                    if (!name) return '';
-                    const cleanName = name.split('(')[0].trim();
+                const getStaffId = async (nameRaw) => {
+                    if (!nameRaw) return '';
+                    
+                    let cleanName = nameRaw.split('(')[0].trim();
+                    let explicitUsername = null;
+                    
+                    const usernameMatch = nameRaw.match(/\(([^)]+)\)/);
+                    if (usernameMatch && usernameMatch[1]) {
+                        explicitUsername = usernameMatch[1].trim();
+                    }
+                    
                     const cleanNameLower = cleanName.toLowerCase();
                     const staff = staffList.find(s => (s.Full_Name || s.fullName)?.toLowerCase() === cleanNameLower);
                     
@@ -89,7 +97,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     
                     // Nếu chưa có -> Tự động tạo Cán bộ và Người dùng
                     const newStaffId = `AUTO-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-                    const username = generateUsername(cleanName);
+                    const username = explicitUsername || generateUsername(cleanName);
                     
                     const newStaff = {
                         Full_Name: cleanName,
@@ -179,6 +187,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                     const assigneeId = await getStaffId(doc.nguoiSoan);
 
+                    // Xử lý list ID cho Co_Assignee
+                    const coIdList = [];
+                    if (doc.coAssignee) {
+                        const coAssigneesArr = doc.coAssignee.split(',').filter(x => x.trim() !== '');
+                        for (const coName of coAssigneesArr) {
+                            const coId = await getStaffId(coName.trim());
+                            if (coId) coIdList.push(coId);
+                        }
+                    }
+
                     // Lưu văn bản vào Firebase
                     const newDoc = {
                         Doc_ID: doc.doc_id || '',
@@ -191,7 +209,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         Deadline: doc.deadline || '',
                         Status: 'Đang xử lý',
                         Note: doc.loaiVanBan ? `Loại VB: ${doc.loaiVanBan}` : '',
-                        Co_Assignee: doc.coAssignee || '',
+                        Co_Assignee: coIdList.join(', '),
                         File_URL: fileUrls.join('\n'),
                         createdAt: new Date().toISOString()
                     };
@@ -216,19 +234,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     }
 
                     // Tạo Task phối hợp
-                    if (doc.coAssignee) {
-                        const coAssigneesArr = doc.coAssignee.split(',').filter(x => x.trim() !== '');
-                        for (const coName of coAssigneesArr) {
-                            const coId = await getStaffId(coName.trim());
-                            if (coId && coId !== assigneeId) {
-                                await fetch(`${FIREBASE_URL}/tasks.json`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        Source: 'Văn bản đến', Linked_Doc_ID: newDocId, Category: 'Văn bản chỉ đạo', Priority: doc.doKhan || 'Bình thường', Status: 'Đang xử lý', Lead_Assignee: coId, Role: 'Phối hợp', Deadline: doc.deadline || '', createdAt: new Date().toISOString()
-                                    })
-                                });
-                            }
+                    for (const coId of coIdList) {
+                        if (coId && coId !== assigneeId) {
+                            await fetch(`${FIREBASE_URL}/tasks.json`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    Source: 'Văn bản đến', Linked_Doc_ID: newDocId, Category: 'Văn bản chỉ đạo', Priority: doc.doKhan || 'Bình thường', Status: 'Đang xử lý', Lead_Assignee: coId, Role: 'Phối hợp', Deadline: doc.deadline || '', createdAt: new Date().toISOString()
+                                })
+                            });
                         }
                     }
                 }
@@ -321,15 +335,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                             let m;
                                             while ((m = spanRegex.exec(namesHtml)) !== null) {
                                                 let name = m[1].trim();
-                                                name = name.replace(/\s*\([^)]+\)\.?/g, '').trim();
                                                 const txtName = document.createElement("textarea");
                                                 txtName.innerHTML = name;
                                                 coAssignees.push(txtName.value);
                                             }
                                         }
 
-                                        // Tìm Ngày hết hạn
-                                        const deadlineMatch = decodedHtml.match(/Ngày hết hạn\s*:\s*(?:<[^>]+>)*\s*([\d]{2}\/[\d]{2}\/[\d]{4})/i);
+                                        // Tìm Ngày hết hạn bằng cách xóa sạch thẻ HTML trước
+                                        const plainText = decodedHtml.replace(/<[^>]+>/g, ' ');
+                                        const deadlineMatch = plainText.match(/(?:Ngày hết hạn|Hạn xử lý|đến ngày)\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{4})/i);
                                         if (deadlineMatch && deadlineMatch[1]) {
                                             deadline = deadlineMatch[1].trim();
                                         }

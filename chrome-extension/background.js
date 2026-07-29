@@ -364,7 +364,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                             const namesHtml = coAssigneeMatch[1];
                                             let cleanNames = namesHtml.replace(/<[^>]+>/g, '').trim();
                                             cleanNames = cleanNames.replace(/\.$/, ''); // Xóa dấu chấm cuối câu
-                                            const arr = cleanNames.split(',').map(s => s.trim()).filter(s => s !== '');
+                                            // VNPT dùng dấu chấm (.) hoặc dấu phẩy (,) để phân cách. 
+                                            // Chú ý: Trong username CŨNG CÓ dấu chấm (vd: tiennh.ubxphurieng).
+                                            // Nên chỉ split bằng phẩy, HOẶC bằng dấu chấm nếu phía trước nó là dấu ngoặc đóng ")".
+                                            const arr = cleanNames.split(/,\s*|(?<=\))\s*\.\s*/).map(s => s.trim()).filter(s => s !== '');
                                             coAssignees = arr;
                                         }
 

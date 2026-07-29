@@ -188,7 +188,17 @@ function scrapeCurrentPage() {
         // Các chỉ số cột dựa theo phân tích thực tế:
         const soDen = tds[6]?.innerText.trim() || "";
         const soHieu = tds[7]?.innerText.trim() || "";
-        const trichYeu = (tds[8]?.innerText || tds[5]?.innerText || "").trim().split('\\n')[0].trim();
+        
+        const trichYeuTd = tds[8] || tds[5];
+        const trichYeu = (trichYeuTd?.innerText || "").trim().split('\n')[0].trim();
+        
+        let detailUrl = '';
+        if (trichYeuTd) {
+            const aTag = trichYeuTd.querySelector('a');
+            if (aTag && aTag.href) {
+                detailUrl = aTag.href;
+            }
+        }
         
         let ngayVanBanText = tds[9]?.innerText.trim() || "";
         let ngayDenText = tds[10]?.innerText.trim() || "";
@@ -218,7 +228,7 @@ function scrapeCurrentPage() {
         results.push({
             payload: {
                 soHieu, soDen, trichYeu, ngayDen, loaiVanBan, coQuanBanHanh,
-                nguoiSoan: xlc, doKhan, ngayVanBan
+                nguoiSoan: xlc, doKhan, ngayVanBan, detailUrl
             },
             doc_id: doc_id
         });
@@ -331,9 +341,39 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                     docsPayload[i].coAssignee = coAssignees.join(', ');
                     addLog(`👥 Đã tìm thấy ${coAssignees.length} Đồng xử lý.`, "success");
                 }
-                if (deadline) {
-                    docsPayload[i].deadline = deadline;
-                    addLog(`⏳ Tìm thấy Hạn xử lý: ${deadline}`, "success");
+                
+                let finalDeadline = deadline;
+                
+                // Nếu Log không có Hạn xử lý, thử tải trang chi tiết để tìm
+                if (!finalDeadline && items[i].payload.detailUrl && !items[i].payload.detailUrl.includes('javascript:')) {
+                    try {
+                        const detailHtml = await fetch(items[i].payload.detailUrl).then(r => r.text());
+                        const parser = new DOMParser();
+                        const docHtml = parser.parseFromString(detailHtml, "text/html");
+                        
+                        // Tìm trong bảng hiển thị
+                        const cells = docHtml.querySelectorAll('td, th');
+                        for (let j = 0; j < cells.length; j++) {
+                            const text = cells[j].innerText.trim();
+                            if (text === 'Ngày hết hạn' || text === 'Hạn xử lý') {
+                                const nextCell = cells[j].nextElementSibling;
+                                if (nextCell) {
+                                    const m = nextCell.innerText.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+                                    if (m) {
+                                        finalDeadline = m[1];
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Lỗi lấy Hạn xử lý từ trang chi tiết:", e);
+                    }
+                }
+
+                if (finalDeadline) {
+                    docsPayload[i].deadline = finalDeadline;
+                    addLog(`⏳ Tìm thấy Hạn xử lý: ${finalDeadline}`, "success");
                 }
                 
                 // Cập nhật lại Username cho Người Xử Lý Chính nếu tìm thấy trong Log

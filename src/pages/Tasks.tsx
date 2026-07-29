@@ -281,7 +281,7 @@ export function Tasks() {
           const todayISO = `${nowObj.getFullYear()}-${String(nowObj.getMonth() + 1).padStart(2, '0')}-${String(nowObj.getDate()).padStart(2, '0')} ${String(nowObj.getHours()).padStart(2, '0')}:${String(nowObj.getMinutes()).padStart(2, '0')}:${String(nowObj.getSeconds()).padStart(2, '0')}`;
           const newLog = `[${new Date().toLocaleString('en-GB')}] ${user?.FullName || 'Cán bộ'} đã [XIN DUYỆT KẾT QUẢ].`;
           const payload = mapTaskToPayload(task, 'Chờ duyệt', todayISO, newLog);
-          const res = await api.updateTask(task.Task_ID, payload);
+          const res = await api.updateTask(task.id || task.Task_ID, payload);
           if (res.success) {
             await initialize();
           } else {
@@ -311,7 +311,7 @@ export function Tasks() {
           setIsLoading(true);
           const { api } = await import('@/services/api');
           const payload = mapTaskToPayload(task, newStatus, isApproved ? undefined : '');
-          const res = await api.updateTask(task.Task_ID, payload);
+          const res = await api.updateTask(task.id || task.Task_ID, payload);
           if (res.success) {
             await initialize();
           } else {
@@ -332,7 +332,7 @@ export function Tasks() {
       const { api } = await import('@/services/api');
       let res;
       if (editingTask) {
-        res = await api.updateTask(editingTask.Task_ID, payload);
+        res = await api.updateTask(editingTask.id || editingTask.Task_ID, payload);
       } else {
         res = await api.createTask(payload);
       }
@@ -930,7 +930,7 @@ export function Tasks() {
                                <div className="flex items-center justify-center gap-1.5">
                                  <button onClick={() => handleEdit(task)} className="p-1 text-gray-400 hover:text-primary transition-colors" title="Xem"><Eye className="w-3.5 h-3.5" /></button>
                                  {permissions.canEditDoc && <button onClick={() => handleEdit(task)} className="p-1 text-gray-400 hover:text-amber-600 transition-colors" title="Sửa"><Edit className="w-3.5 h-3.5" /></button>}
-                                 {permissions.canDelete && <button onClick={() => handleDelete(task.Task_ID)} className="p-1 text-gray-400 hover:text-rose-600 transition-colors" title="Xóa"><Trash2 className="w-3.5 h-3.5" /></button>}
+                                 {permissions.canDelete && <button onClick={() => handleDelete(task.id || task.Task_ID)} className="p-1 text-gray-400 hover:text-rose-600 transition-colors" title="Xóa"><Trash2 className="w-3.5 h-3.5" /></button>}
                                </div>
                              </div>
                           </td>
@@ -1024,7 +1024,7 @@ export function Tasks() {
                            {(user?.FullName === task.Lead_Assignee) && task.Status !== 'Hoàn thành' && (
                              <button onClick={() => handleRequestApproval(task)} className="p-1 text-gray-400 hover:text-emerald-600 transition-colors" title="Xin duyệt"><CheckCircle className="w-4 h-4" /></button>
                            )}
-                           {permissions.canDelete && <button onClick={() => handleDelete(task.Task_ID)} className="p-1 text-gray-400 hover:text-rose-600 transition-colors" title="Xóa"><Trash2 className="w-4 h-4" /></button>}
+                           {permissions.canDelete && <button onClick={() => handleDelete(task.id || task.Task_ID)} className="p-1 text-gray-400 hover:text-rose-600 transition-colors" title="Xóa"><Trash2 className="w-4 h-4" /></button>}
                          </div>
                        </div>
                     </td>
@@ -1052,7 +1052,7 @@ export function Tasks() {
           onSubmit={handleFormSubmit}
           onDeleteDoc={editingTask ? async () => {
             const { api } = await import('@/services/api');
-            const res = await api.deleteTask(editingTask.Task_ID);
+            const res = await api.deleteTask(editingTask.id || editingTask.Task_ID);
             if (res.success) { await initialize(); } else { throw new Error(res.message); }
           } : undefined}
           onCancel={() => {

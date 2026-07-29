@@ -58,7 +58,7 @@ export function Staff() {
       const { api } = await import('@/services/api');
       let res;
       if (editingStaff) {
-        res = await api.updateStaff(editingStaff.Staff_ID, payload);
+        res = await api.updateStaff(editingStaff.id || editingStaff.Staff_ID, payload);
       } else {
         res = await api.createStaff(payload);
       }
@@ -190,7 +190,7 @@ export function Staff() {
                     <Edit className="w-3.5 h-3.5" />
                   </button>
                   <button 
-                    onClick={() => handleDelete(person.Staff_ID)}
+                    onClick={() => handleDelete(person.id || person.Staff_ID)}
                     className="flex items-center justify-center gap-1.5 px-3 py-2 bg-rose-50 text-rose-600 rounded-lg text-[13px] font-bold hover:bg-rose-100 transition-colors"
                     title="Xóa"
                   >

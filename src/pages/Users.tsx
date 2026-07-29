@@ -54,7 +54,7 @@ export function Users() {
       const { api } = await import('@/services/api');
       let res;
       if (editingUser) {
-        res = await api.updateUser(editingUser['Mã người dùng'], payload);
+        res = await api.updateUser(editingUser.id || editingUser['Mã người dùng'], payload);
       } else {
         res = await api.createUser(payload);
       }
@@ -176,7 +176,7 @@ export function Users() {
                           <Edit className="w-3.5 h-3.5" />
                         </button>
                         <button 
-                          onClick={() => handleDelete(user['Mã người dùng'])}
+                          onClick={() => handleDelete(user.id || user['Mã người dùng'])}
                           className="p-1.5 text-rose-500 hover:text-rose-600 transition-colors border border-rose-100 rounded-md bg-rose-50" 
                           title="Xóa"
                         >

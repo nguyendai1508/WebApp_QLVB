@@ -90,7 +90,7 @@ export function OutgoingDocs() {
       const { api } = await import('@/services/api');
       let res;
       if (editingDoc) {
-        res = await api.updateOutgoingDoc(editingDoc.Doc_ID, payload);
+        res = await api.updateOutgoingDoc(editingDoc.id || editingDoc.Doc_ID, payload);
       } else {
         res = await api.createOutgoingDoc(payload);
       }
@@ -294,7 +294,7 @@ export function OutgoingDocs() {
                         )}
                         {permissions.canDelete && (
                           <button 
-                            onClick={() => handleDelete(doc.Doc_ID)}
+                            onClick={() => handleDelete(doc.id || doc.Doc_ID)}
                             className="p-1.5 text-gray-400 hover:text-rose-600 transition-colors" 
                             title="Xóa"
                           >
@@ -328,7 +328,7 @@ export function OutgoingDocs() {
           onSubmit={handleFormSubmit}
           onDeleteDoc={editingDoc ? async () => {
             const { api } = await import('@/services/api');
-            const res = await api.deleteOutgoingDoc(editingDoc.Doc_ID);
+            const res = await api.deleteOutgoingDoc(editingDoc.id || editingDoc.Doc_ID);
             if (res.success) { await initialize(); } else { throw new Error(res.message); }
           } : undefined}
         />

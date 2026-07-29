@@ -105,7 +105,7 @@ export function IncomingDocs() {
             auditLog: `[${new Date().toLocaleString('en-GB')}] Đã giao việc (Mã: ${res.id}) cho cán bộ ${data.leadAssignee}.\n${selectedDoc.History || ''}`,
             createdBy: selectedDoc.Created_By || ''
           };
-          await api.updateIncomingDoc(selectedDoc.Doc_ID, updatePayload);
+          await api.updateIncomingDoc(selectedDoc.id || selectedDoc.Doc_ID, updatePayload);
         }
         setIsTaskModalOpen(false);
         await initialize();
@@ -186,7 +186,7 @@ export function IncomingDocs() {
       const { api } = await import('@/services/api');
       let res;
       if (editingDoc) {
-        res = await api.updateIncomingDoc(editingDoc.Doc_ID, payload);
+        res = await api.updateIncomingDoc(editingDoc.id || editingDoc.Doc_ID, payload);
       } else {
         res = await api.createIncomingDoc(payload);
       }
@@ -382,7 +382,7 @@ export function IncomingDocs() {
                         )}
                         {permissions.canDelete && (
                           <button 
-                            onClick={() => handleDelete(doc.Doc_ID)}
+                            onClick={() => handleDelete(doc.id || doc.Doc_ID)}
                             className="p-1.5 text-gray-400 hover:text-rose-600 transition-colors" 
                             title="Xóa"
                           >
@@ -429,7 +429,7 @@ export function IncomingDocs() {
           onSubmit={handleFormSubmit}
           onDeleteDoc={editingDoc ? async () => {
             const { api } = await import('@/services/api');
-            const res = await api.deleteIncomingDoc(editingDoc.Doc_ID);
+            const res = await api.deleteIncomingDoc(editingDoc.id || editingDoc.Doc_ID);
             if (res.success) { await initialize(); } else { throw new Error(res.message); }
           } : undefined}
         />

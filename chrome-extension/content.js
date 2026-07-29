@@ -1,14 +1,14 @@
-﻿if (!window.qlvbContentScriptInjected) {
+if (!window.qlvbContentScriptInjected) {
     window.qlvbContentScriptInjected = true;
 
 // ==============================
-// UI OVERLAY (Giao diá»‡n hiá»ƒn thá»‹ trÃªn trang)
+// UI OVERLAY (Giao diện hiển thị trên trang)
 // ==============================
 function createOverlay() {
     let overlay = document.getElementById("qlvb-sync-overlay");
     if (overlay) {
         overlay.style.display = "block";
-        // Reset ná»™i dung cÅ© náº¿u cáº§n
+        // Reset nội dung cũ nếu cần
         const logContainer = document.getElementById("qlvb-sync-log");
         if (logContainer) logContainer.innerHTML = "";
         return;
@@ -34,10 +34,10 @@ function createOverlay() {
             #qlvb-sync-close:hover { color: #fff; }
         </style>
         <div id="qlvb-sync-header">
-            <h3>âš¡ QLVB Sync -> Web App</h3>
-            <button id="qlvb-sync-close">âœ•</button>
+            <h3>⚡ QLVB Sync -> Web App</h3>
+            <button id="qlvb-sync-close">✕</button>
         </div>
-        <div id="qlvb-sync-status">Äang khá»Ÿi táº¡o...</div>
+        <div id="qlvb-sync-status">Đang khởi tạo...</div>
         <div id="qlvb-sync-progress-bar"><div id="qlvb-sync-progress-fill"></div></div>
         <div id="qlvb-sync-log"></div>
     `;
@@ -50,11 +50,11 @@ function createOverlay() {
         sessionStorage.removeItem('QLVB_CONCURRENCY');
         sessionStorage.removeItem('QLVB_MAX_PAGES');
         sessionStorage.removeItem('QLVB_CURRENT_PAGE');
-        addLog(`ðŸ›‘ ÄÃ£ yÃªu cáº§u dá»«ng Ä‘á»“ng bá»™! QuÃ¡ trÃ¬nh sáº½ dá»«ng sau giÃ¢y lÃ¡t.`, "error");
-        updateStatus(`ðŸ›‘ ÄÃ£ dá»«ng Ä‘á»“ng bá»™.`);
+        addLog(`🛑 Đã yêu cầu dừng đồng bộ! Quá trình sẽ dừng sau giây lát.`, "error");
+        updateStatus(`🛑 Đã dừng đồng bộ.`);
     });
     
-    // ThÃªm chá»©c nÄƒng kÃ©o tháº£ (Draggable)
+    // Thêm chức năng kéo thả (Draggable)
     const header = document.getElementById("qlvb-sync-header");
     let isDragging = false;
     let currentX;
@@ -89,7 +89,7 @@ function createOverlay() {
             xOffset = currentX;
             yOffset = currentY;
             
-            // XÃ³a fixed bottom/right ban Ä‘áº§u Ä‘á»ƒ dÃ¹ng transform
+            // Xóa fixed bottom/right ban đầu để dùng transform
             overlay.style.bottom = "auto";
             overlay.style.right = "auto";
             overlay.style.left = "20px";
@@ -121,7 +121,7 @@ function addLog(text, type = "info") {
     try { chrome.runtime.sendMessage({ action: 'REPORT_PROGRESS', message: text, logType: 'log' }); } catch(e){}
 }
 
-// HÃ m táº£i file tá»« link trá»±c tiáº¿p trÃªn trang Ä‘á»ƒ láº¥y dáº¡ng base64
+// Hàm tải file từ link trực tiếp trên trang để lấy dạng base64
 async function fetchFileAsBase64(url) {
     try {
         const response = await fetch(url, { credentials: "include", redirect: "follow" });
@@ -136,7 +136,7 @@ async function fetchFileAsBase64(url) {
     } catch { return null; }
 }
 
-// HÃ m gá»­i yÃªu cáº§u láº¥y link file thá»±c sá»± tá»›i background (bypass CSP)
+// Hàm gửi yêu cầu lấy link file thực sự tới background (bypass CSP)
 function getFilesForDoc(doc_id) {
     return new Promise((resolve) => {
         chrome.runtime.sendMessage({ 
@@ -147,12 +147,12 @@ function getFilesForDoc(doc_id) {
             resolve(response || []);
         });
         
-        // Báº¯t lá»—i timeout an toÃ n (Ä‘á» phÃ²ng extension há»ng)
+        // Bắt lỗi timeout an toàn (đề phòng extension hỏng)
         setTimeout(() => resolve([]), 5000);
     });
 }
 
-// HÃ m gá»­i yÃªu cáº§u láº¥y danh sÃ¡ch Ä‘á»“ng xá»­ lÃ½ tá»›i background (bypass CSP)
+// Hàm gửi yêu cầu lấy danh sách đồng xử lý tới background (bypass CSP)
 function getCoAssigneesForDoc(doc_id) {
     return new Promise((resolve) => {
         chrome.runtime.sendMessage({ 
@@ -163,34 +163,30 @@ function getCoAssigneesForDoc(doc_id) {
             resolve(response || { coAssignees: [], deadline: '' });
         });
         
-        // Báº¯t lá»—i timeout an toÃ n
+        // Bắt lỗi timeout an toàn
         setTimeout(() => resolve({ coAssignees: [], deadline: '' }), 5000);
     });
 }
-// BÃ³c tÃ¡ch báº£ng dá»¯ liá»‡u theo cáº¥u trÃºc VNPT Äá»“ng Nai
+// Bóc tách bảng dữ liệu theo cấu trúc VNPT Đồng Nai
 function scrapeCurrentPage() {
-    const tables = Array.from(document.querySelectorAll('table'));
-    const table = tables.find(t => t.textContent.includes('TrÃ­ch yáº¿u') && t.textContent.includes('Sá»‘ Ä‘áº¿n'));
-    
-    if (!table) {
-        throw new Error("KhÃ´ng tÃ¬m tháº¥y báº£ng dá»¯ liá»‡u vÄƒn báº£n. Vui lÃ²ng kiá»ƒm tra láº¡i trang.");
+    const dataRows = Array.from(document.querySelectorAll('tr[id^="vanban_id_"]'));
+    if (dataRows.length === 0) {
+        throw new Error("Không tìm thấy dòng dữ liệu văn bản nào (không có thẻ tr chứa vanban_id). Vui lòng kiểm tra lại trang.");
     }
     
-    const rows = table.querySelectorAll("tr");
     const results = [];
 
-    // Báº¯t Ä‘áº§u tá»« 1 vÃ¬ row 0 lÃ  header
-    for (let i = 1; i < rows.length; i++) {
-        const tr = rows[i]; 
+    for (let i = 0; i < dataRows.length; i++) {
+        const tr = dataRows[i]; 
         const tds = tr.querySelectorAll("td");
-        if (tds.length < 25) continue; // Báº£ng má»›i cÃ³ khoáº£ng 29 cá»™t
+        if (tds.length < 25) continue; // Bảng mới có khoảng 29 cột
 
-        // CÃ¡c chá»‰ sá»‘ cá»™t dá»±a theo phÃ¢n tÃ­ch thá»±c táº¿:
-        const soDen = tds[6]?.textContent.trim() || "";
-        const soHieu = tds[7]?.textContent.trim() || "";
+        // Các chỉ số cột dựa theo phân tích thực tế:
+        const soDen = tds[6]?.innerText.trim() || "";
+        const soHieu = tds[7]?.innerText.trim() || "";
         
         const trichYeuTd = tds[8] || tds[5];
-        const trichYeu = (trichYeuTd?.textContent || "").trim().split('\n')[0].trim();
+        const trichYeu = (trichYeuTd?.innerText || "").trim().split('\n')[0].trim();
         
         let detailUrl = '';
         if (trichYeuTd) {
@@ -200,22 +196,22 @@ function scrapeCurrentPage() {
             }
         }
         
-        let ngayVanBanText = tds[9]?.textContent.trim() || "";
-        let ngayDenText = tds[10]?.textContent.trim() || "";
+        let ngayVanBanText = tds[9]?.innerText.trim() || "";
+        let ngayDenText = tds[10]?.innerText.trim() || "";
         
-        const coQuanBanHanh = tds[14]?.textContent.trim() || "";
-        const rowDeadline = tds[13]?.textContent.trim() || ""; // Háº¡n xá»­ lÃ½ láº¥y ngay tá»« báº£ng chÃ­nh!
-        const xlc = tds[18]?.textContent.trim() || ""; // Xá»­ lÃ½ chÃ­nh
-        const doKhan = tds[19]?.textContent.trim() || "";
-        const loaiVanBan = tds[20]?.textContent.trim() || "";
+        const coQuanBanHanh = tds[14]?.innerText.trim() || "";
+        const rowDeadline = tr.querySelector('.vanbanden_hienthi_han_xuly')?.textContent.trim() || tds[13]?.textContent.trim() || ""; // Dùng textContent vì cột bị ẩn (display: none)
+        const xlc = tds[18]?.innerText.trim() || ""; // Xử lý chính
+        const doKhan = tds[19]?.innerText.trim() || "";
+        const loaiVanBan = tds[20]?.innerText.trim() || "";
         
-        // Láº¥y DOC_ID tá»« cá»™t Files (cá»™t 22)
+        // Lấy DOC_ID từ cột Files (cột 22)
         let doc_id = '';
         const filesHtml = tds[22]?.innerHTML || "";
         const match = filesHtml.match(/allFileDownload\((\d+)\)/);
         if (match) doc_id = match[1];
 
-        // Format ngÃ y thÃ¡ng chuáº©n YYYY-MM-DDTHH:mm:ss
+        // Format ngày tháng chuẩn YYYY-MM-DDTHH:mm:ss
         let ngayDen = "";
         const dp = ngayDenText.match(/(\d{2})\/(\d{2})\/(\d{4})/);
         if (dp) ngayDen = `${dp[3]}-${dp[2]}-${dp[1]}T00:00:00`;
@@ -224,7 +220,7 @@ function scrapeCurrentPage() {
         const dp2 = ngayVanBanText.match(/(\d{2})\/(\d{2})\/(\d{4})/);
         if (dp2) ngayVanBan = `${dp2[3]}-${dp2[2]}-${dp2[1]}`;
 
-        if (!soDen && !trichYeu) continue; // DÃ²ng trá»‘ng
+        if (!soDen && !trichYeu) continue; // Dòng trống
 
         results.push({
             payload: {
@@ -237,7 +233,7 @@ function scrapeCurrentPage() {
     return results;
 }
 
-// HÃ m cháº¡y song song cá»±c háº¡n (Concurrency Pool)
+// Hàm chạy song song cực hạn (Concurrency Pool)
 async function processWithConcurrency(items, limit, asyncFn) {
     const results = [];
     const executing = [];
@@ -257,36 +253,36 @@ async function processWithConcurrency(items, limit, asyncFn) {
 
 window._qlvbStopRequested = false;
 
-// HÃ m cÃ o chÃ­nh
+// Hàm cào chính
 async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendResponseCallback = null) {
     if (window._qlvbStopRequested) return;
     try {
         createOverlay();
-        updateStatus("Báº¯t Ä‘áº§u quÃ©t danh sÃ¡ch...");
+        updateStatus("Bắt đầu quét danh sách...");
         updateProgress(10);
-    addLog("ðŸ” Äang Ä‘á»c HTML báº£ng dá»¯ liá»‡u hiá»‡n táº¡i...", "info");
+    addLog("🔍 Đang đọc HTML bảng dữ liệu hiện tại...", "info");
 
-    // 1. QuÃ©t DOM
+    // 1. Quét DOM
     let items = [];
     try {
         items = scrapeCurrentPage();
     } catch (e) {
-        addLog("âŒ Lá»—i quÃ©t DOM: " + e.message, "error");
+        addLog("❌ Lỗi quét DOM: " + e.message, "error");
         if (sendResponseCallback) sendResponseCallback({ success: false, error: e.message });
         sessionStorage.removeItem('QLVB_AUTO_CRAWL');
         return;
     }
     
     if (items.length === 0) {
-        addLog("âŒ Lá»—i: KhÃ´ng trÃ­ch xuáº¥t Ä‘Æ°á»£c dÃ²ng vÄƒn báº£n nÃ o.", "error");
-        if (sendResponseCallback) sendResponseCallback({ success: false, error: "KhÃ´ng cÃ³ dá»¯ liá»‡u." });
+        addLog("❌ Lỗi: Không trích xuất được dòng văn bản nào.", "error");
+        if (sendResponseCallback) sendResponseCallback({ success: false, error: "Không có dữ liệu." });
         sessionStorage.removeItem('QLVB_AUTO_CRAWL');
         return;
     }
 
-    // ---------- KIá»‚M TRA TRÃ™NG Láº¶P Dá»°A TRÃŠN Dá»® LIá»†U Tá»ª WEB APP -----------
-    updateStatus("Äang Ä‘á»‘i chiáº¿u dá»¯ liá»‡u...");
-    addLog(`ðŸ” Kiá»ƒm tra trÃ¹ng láº·p ${items.length} vÄƒn báº£n...`, "info");
+    // ---------- KIỂM TRA TRÙNG LẶP DỰA TRÊN DỮ LIỆU TỪ WEB APP -----------
+    updateStatus("Đang đối chiếu dữ liệu...");
+    addLog(`🔍 Kiểm tra trùng lặp ${items.length} văn bản...`, "info");
     
     let rawDocs = items.map(item => ({ ...item.payload }));
     let skipCount = 0;
@@ -295,7 +291,7 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
         const keysSet = new Set(existingKeys);
         const originalLength = items.length;
         
-        // Lá»c láº¡i máº£ng items CHá»ˆ GIá»® Láº I NHá»®NG VÄ‚N Báº¢N Má»šI
+        // Lọc lại mảng items CHỈ GIỮ LẠI NHỮNG VĂN BẢN MỚI
         items = items.filter(item => {
             const d = item.payload;
             const docKey = `${(d.soHieu || d.soDen || '').trim()}|${(d.trichYeu || '').trim()}`;
@@ -308,82 +304,82 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
     let successCount = 0;
 
     if (items.length === 0) {
-        addLog(`â­ï¸ ToÃ n bá»™ ${rawDocs.length} vÄƒn báº£n ÄÃƒ Tá»’N Táº I. Bá» qua táº£i File.`, "success");
+        addLog(`⏭️ Toàn bộ ${rawDocs.length} văn bản ĐÃ TỒN TẠI. Bỏ qua tải File.`, "success");
         updateProgress(90);
     } else {
         if (skipCount > 0) {
-            addLog(`âœ… Bá» qua ${skipCount} vÄƒn báº£n cÅ©. Báº¯t Ä‘áº§u táº£i File cho ${items.length} vÄƒn báº£n má»›i...`, "success");
+            addLog(`✅ Bỏ qua ${skipCount} văn bản cũ. Bắt đầu tải File cho ${items.length} văn bản mới...`, "success");
         } else {
-            addLog(`âœ… TÃ¬m tháº¥y ${items.length} vÄƒn báº£n má»›i. Báº¯t Ä‘áº§u táº£i File...`, "success");
+            addLog(`✅ Tìm thấy ${items.length} văn bản mới. Bắt đầu tải File...`, "success");
         }
         
-        updateStatus(`Äang táº£i File Ä‘Ã­nh kÃ¨m (An toÃ n)...`);
+        updateStatus(`Đang tải File đính kèm (An toàn)...`);
         updateProgress(20);
 
-        // Khá»Ÿi táº¡o máº£ng docsPayload
+        // Khởi tạo mảng docsPayload
         docsPayload = items.map(item => ({ ...item.payload, files: [] }));
         
-        // Gom táº¥t cáº£ cÃ¡c tÃ¡c vá»¥ táº£i file vÃ  láº¥y thÃ´ng tin Äá»“ng xá»­ lÃ½
+        // Gom tất cả các tác vụ tải file và lấy thông tin Đồng xử lý
         const fileTasks = [];
         for (let i = 0; i < items.length; i++) {
             if (window._qlvbStopRequested) return;
             if (items[i].doc_id) {
-                addLog(`Äang tÃ¬m link áº©n vÃ  Äá»“ng xá»­ lÃ½ cho vÄƒn báº£n ${items[i].payload.soDen}...`, "info");
+                addLog(`Đang tìm link ẩn và Đồng xử lý cho văn bản ${items[i].payload.soDen}...`, "info");
                 
-                // Láº¥y files
+                // Lấy files
                 const fileUrls = await getFilesForDoc(items[i].doc_id);
                 for (const f of fileUrls) {
                     fileTasks.push({ itemIndex: i, f: f });
                 }
                 
-                // Láº¥y Äá»“ng xá»­ lÃ½ vÃ  Háº¡n xá»­ lÃ½
+                // Lấy Đồng xử lý và Hạn xử lý
                 const { coAssignees, deadline, leadAssigneeLog } = await getCoAssigneesForDoc(items[i].doc_id);
                 if (coAssignees && coAssignees.length > 0) {
                     docsPayload[i].coAssignee = coAssignees.join(', ');
-                    addLog(`ðŸ‘¥ ÄÃ£ tÃ¬m tháº¥y ${coAssignees.length} Äá»“ng xá»­ lÃ½.`, "success");
+                    addLog(`👥 Đã tìm thấy ${coAssignees.length} Đồng xử lý.`, "success");
                 }
                 
-                // Náº¿u Log khÃ´ng cÃ³ Háº¡n xá»­ lÃ½, dÃ¹ng Háº¡n xá»­ lÃ½ trÃªn báº£ng chÃ­nh
+                // Nếu Log không có Hạn xử lý, dùng Hạn xử lý trên bảng chính
                 let finalDeadline = items[i].payload.rowDeadline || deadline;
                 
-                // Náº¿u váº«n khÃ´ng cÃ³, thá»­ táº£i trang chi tiáº¿t Ä‘á»ƒ tÃ¬m
+                // Nếu vẫn không có, thử tải trang chi tiết để tìm
                 if (!finalDeadline && items[i].payload.detailUrl) {
                     if (items[i].payload.detailUrl.includes('javascript:')) {
-                        addLog(`âš ï¸ KhÃ´ng thá»ƒ láº¥y Háº¡n xá»­ lÃ½ vÃ¬ link lÃ  Javascript PostBack.`, "warning");
+                        addLog(`⚠️ Không thể lấy Hạn xử lý vì link là Javascript PostBack.`, "warning");
                     } else {
                         try {
-                            addLog(`ðŸ” Äang táº£i trang chi tiáº¿t Ä‘á»ƒ tÃ¬m Háº¡n xá»­ lÃ½...`, "info");
+                            addLog(`🔍 Đang tải trang chi tiết để tìm Hạn xử lý...`, "info");
                             const detailHtml = await fetch(items[i].payload.detailUrl, { credentials: 'include' }).then(r => r.text());
                             const parser = new DOMParser();
                             const docHtml = parser.parseFromString(detailHtml, "text/html");
                             
-                            // Regex tÃ¬m NgÃ y háº¿t háº¡n hoáº·c Háº¡n xá»­ lÃ½ trong toÃ n bá»™ text cá»§a trang
+                            // Regex tìm Ngày hết hạn hoặc Hạn xử lý trong toàn bộ text của trang
                             const plainText = docHtml.body.textContent || "";
-                            const dlMatch = plainText.match(/(?:NgÃ y háº¿t háº¡n|Háº¡n xá»­ lÃ½|Háº¡n giáº£i quyáº¿t)[\s\S]{0,150}?(\d{1,2}\/\d{1,2}\/\d{4})/i);
+                            const dlMatch = plainText.match(/(?:Ngày hết hạn|Hạn xử lý|Hạn giải quyết)[\s\S]{0,150}?(\d{1,2}\/\d{1,2}\/\d{4})/i);
                             
                             if (dlMatch && dlMatch[1]) {
                                 finalDeadline = dlMatch[1].trim();
                             }
                         } catch (e) {
-                            console.error("Lá»—i láº¥y Háº¡n xá»­ lÃ½ tá»« trang chi tiáº¿t:", e);
-                            addLog(`âŒ Lá»—i táº£i trang chi tiáº¿t: ${e.message}`, "error");
+                            console.error("Lỗi lấy Hạn xử lý từ trang chi tiết:", e);
+                            addLog(`❌ Lỗi tải trang chi tiết: ${e.message}`, "error");
                         }
                     }
                 }
 
                 if (finalDeadline) {
                     docsPayload[i].deadline = finalDeadline;
-                    addLog(`â³ TÃ¬m tháº¥y Háº¡n xá»­ lÃ½: ${finalDeadline}`, "success");
+                    addLog(`⏳ Tìm thấy Hạn xử lý: ${finalDeadline}`, "success");
                 } else {
-                    addLog(`â³ KHÃ”NG tÃ¬m tháº¥y Háº¡n xá»­ lÃ½ cho vÄƒn báº£n nÃ y.`, "warning");
+                    addLog(`⏳ KHÔNG tìm thấy Hạn xử lý cho văn bản này.`, "warning");
                 }
                 
-                // Cáº­p nháº­t láº¡i Username cho NgÆ°á»i Xá»­ LÃ½ ChÃ­nh náº¿u tÃ¬m tháº¥y trong Log
+                // Cập nhật lại Username cho Người Xử Lý Chính nếu tìm thấy trong Log
                 if (leadAssigneeLog && docsPayload[i].nguoiSoan) {
                     const firstPersonName = docsPayload[i].nguoiSoan.split(',')[0].trim().toLowerCase();
                     if (leadAssigneeLog.toLowerCase().includes(firstPersonName)) {
                         docsPayload[i].nguoiSoan = leadAssigneeLog;
-                        addLog(`ðŸ‘¤ Bá»• sung Username cho Xá»­ lÃ½ chÃ­nh: ${leadAssigneeLog}`, "success");
+                        addLog(`👤 Bổ sung Username cho Xử lý chính: ${leadAssigneeLog}`, "success");
                     }
                 }
             }
@@ -391,16 +387,16 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
 
         let filesDownloaded = 0;
         
-        // Táº¢I FILE: Giá»›i háº¡n 2 luá»“ng
+        // TẢI FILE: Giới hạn 2 luồng
         await processWithConcurrency(fileTasks, 2, async (task) => {
             if (window._qlvbStopRequested) return;
             try {
-                addLog(`ðŸ“¥ Äang táº£i: ${task.f.fileName}...`, "info");
+                addLog(`📥 Đang tải: ${task.f.fileName}...`, "info");
                 let b64 = await fetchFileAsBase64(task.f.href);
                 
                 // Retry
                 if (!b64) {
-                    addLog(`â³ Äang thá»­ táº£i láº¡i: ${task.f.fileName}...`, "info");
+                    addLog(`⏳ Đang thử tải lại: ${task.f.fileName}...`, "info");
                     await new Promise(r => setTimeout(r, 1000));
                     b64 = await fetchFileAsBase64(task.f.href);
                 }
@@ -411,18 +407,18 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                         base64Content: b64
                     });
                 } else {
-                    addLog(`âŒ Táº£i tháº¥t báº¡i (Lá»—i máº¡ng tá»« Sá»Ÿ): ${task.f.fileName}`, "error");
+                    addLog(`❌ Tải thất bại (Lỗi mạng từ Sở): ${task.f.fileName}`, "error");
                 }
             } catch (e) {
-                addLog(`âŒ Lá»—i táº£i file ${task.f.fileName}: ${e.message}`, "error");
+                addLog(`❌ Lỗi tải file ${task.f.fileName}: ${e.message}`, "error");
             }
             filesDownloaded++;
             updateProgress(20 + Math.round((filesDownloaded / fileTasks.length) * 60));
         });
 
-            updateStatus("Äang Ä‘áº©y dá»¯ liá»‡u sang Web App...");
+            updateStatus("Đang đẩy dữ liệu sang Web App...");
             updateProgress(85);
-            addLog(`ðŸš€ Báº¯t Ä‘áº§u gá»­i ${docsPayload.length} vÄƒn báº£n...`, "info");
+            addLog(`🚀 Bắt đầu gửi ${docsPayload.length} văn bản...`, "info");
 
             const BATCH_SIZE = 1;
             let docsSent = 0;
@@ -434,17 +430,17 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                 });
             }
 
-            // Äá»’NG Bá»˜ Dá»® LIá»†U: Báº®T BUá»˜C CHáº Y TUáº¦N Tá»° (concurrency = 1) Äá»‚ TRÃNH Lá»–I TRÃ™NG Láº¶P USER
+            // ĐỒNG BỘ DỮ LIỆU: BẮT BUỘC CHẠY TUẦN TỰ (concurrency = 1) ĐỂ TRÁNH LỖI TRÙNG LẶP USER
             await processWithConcurrency(batches, 1, async (batch) => {
                 if (window._qlvbStopRequested) return;
                 const i = batch.startIndex;
                 const batchDocs = batch.docs;
-                addLog(`ðŸ“¤ Äang gá»­i nhÃ³m vÄƒn báº£n thá»© ${i + 1} Ä‘áº¿n ${i + batchDocs.length}...`, "info");
+                addLog(`📤 Đang gửi nhóm văn bản thứ ${i + 1} đến ${i + batchDocs.length}...`, "info");
                 
                 try {
                     let apiResponse = null;
                     
-                    // CÆ  CHáº¾ Tá»° Äá»˜NG THá»¬ Láº I (RETRY) 3 Láº¦N TRÃNH Rá»šT Máº NG
+                    // CƠ CHẾ TỰ ĐỘNG THỬ LẠI (RETRY) 3 LẦN TRÁNH RỚT MẠNG
                     for (let retry = 0; retry < 3; retry++) {
                         try {
                             apiResponse = await new Promise((resolve, reject) => {
@@ -456,10 +452,10 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                                     }
                                 });
                             });
-                            break; // ThÃ nh cÃ´ng thÃ¬ thoÃ¡t vÃ²ng láº·p Retry
+                            break; // Thành công thì thoát vòng lặp Retry
                         } catch (fetchErr) {
                             if (retry < 2) {
-                                addLog(`â³ MÃ¡y chá»§ báº­n, Ä‘ang thá»­ gá»­i láº¡i nhÃ³m ${i + 1}... láº§n ${retry + 1}`, "info");
+                                addLog(`⏳ Máy chủ bận, đang thử gửi lại nhóm ${i + 1}... lần ${retry + 1}`, "info");
                                 await new Promise(r => setTimeout(r, 4000));
                             } else {
                                 throw fetchErr;
@@ -469,15 +465,15 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
 
                     if (apiResponse && apiResponse.success) {
                         successCount += batchDocs.length;
-                        addLog(`âœ… NhÃ³m ${i + 1} Ä‘áº¿n ${i + batchDocs.length} xá»­ lÃ½ xong (ÄÃ£ chuyá»ƒn Web App)!`, "success");
+                        addLog(`✅ Nhóm ${i + 1} đến ${i + batchDocs.length} xử lý xong (Đã chuyển Web App)!`, "success");
                     } else {
-                        const errMsg = apiResponse ? apiResponse.error : 'KhÃ´ng xÃ¡c Ä‘á»‹nh';
-                        addLog(`âŒ NhÃ³m ${i + 1} tháº¥t báº¡i: ${errMsg}`, "error");
+                        const errMsg = apiResponse ? apiResponse.error : 'Không xác định';
+                        addLog(`❌ Nhóm ${i + 1} thất bại: ${errMsg}`, "error");
                         window._qlvbStopRequested = true;
-                        throw new Error(`Lá»—i tá»« Background: ${errMsg}`);
+                        throw new Error(`Lỗi từ Background: ${errMsg}`);
                     }
                 } catch (netErr) {
-                    addLog(`âŒ Tiáº¿n trÃ¬nh bá»‹ giÃ¡n Ä‘oáº¡n: ${netErr.message}`, "error");
+                    addLog(`❌ Tiến trình bị gián đoạn: ${netErr.message}`, "error");
                     window._qlvbStopRequested = true;
                     throw netErr;
                 }
@@ -485,11 +481,11 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                 docsSent += batchDocs.length;
                 updateProgress(85 + Math.round((docsSent / docsPayload.length) * 15));
             });
-        addLog(`âœ… Xong trang hiá»‡n táº¡i: ThÃªm má»›i ${successCount} VB. Bá» qua ${skipCount} VB cÅ©.`, "success");
+        addLog(`✅ Xong trang hiện tại: Thêm mới ${successCount} VB. Bỏ qua ${skipCount} VB cũ.`, "success");
     }
 
     // ==========================================
-        // Tá»° Äá»˜NG CHUYá»‚N TRANG (AUTO-PAGINATION) CHá»NG Láº¶P VÃ” Háº N
+        // TỰ ĐỘNG CHUYỂN TRANG (AUTO-PAGINATION) CHỐNG LẶP VÔ HẠN
         // ==========================================
         const nextIcon = document.querySelector('.pagination .fa-forward');
         const nextBtn = nextIcon ? nextIcon.closest('a') : null;
@@ -498,15 +494,15 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
 
         if (isNextBtnValid && !window._qlvbStopRequested) {
             
-            // KIá»‚M TRA GIá»šI Háº N TRANG (PAGE LIMITS)
-            let maxPages = parseInt(sessionStorage.getItem('QLVB_MAX_PAGES') || '2'); // Máº·c Ä‘á»‹nh 2 trang
+            // KIỂM TRA GIỚI HẠN TRANG (PAGE LIMITS)
+            let maxPages = parseInt(sessionStorage.getItem('QLVB_MAX_PAGES') || '2'); // Mặc định 2 trang
             let currentPage = parseInt(sessionStorage.getItem('QLVB_CURRENT_PAGE') || '1');
             
             if (currentPage >= maxPages) {
-                 addLog(`ðŸ ÄÃ£ Ä‘áº¡t giá»›i háº¡n ${maxPages} trang. Dá»«ng láº­t trang.`, "success");
+                 addLog(`🏁 Đã đạt giới hạn ${maxPages} trang. Dừng lật trang.`, "success");
                  sessionStorage.removeItem('QLVB_AUTO_CRAWL');
                  updateProgress(100);
-                 updateStatus(`ðŸŽ‰ HOÃ€N Táº¤T! ÄÃ£ Ä‘á»“ng bá»™ ${currentPage} trang.`);
+                 updateStatus(`🎉 HOÀN TẤT! Đã đồng bộ ${currentPage} trang.`);
                  
                  chrome.runtime.sendMessage({
                      action: 'REPORT_FULLY_COMPLETE',
@@ -518,13 +514,13 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
             
             sessionStorage.setItem('QLVB_CURRENT_PAGE', (currentPage + 1).toString());
             
-            updateStatus(`PhÃ¡t hiá»‡n cÃ³ trang tiáº¿p theo (Ä‘ang á»Ÿ trang ${currentPage}/${maxPages === 9999 ? 'Táº¥t cáº£' : maxPages})! Äang chuáº©n bá»‹ chuyá»ƒn...`);
-            addLog(`ðŸ‘‰ Chuáº©n bá»‹ láº­t sang trang tiáº¿p theo sau 2 giÃ¢y...`, "info");
+            updateStatus(`Phát hiện có trang tiếp theo (đang ở trang ${currentPage}/${maxPages === 9999 ? 'Tất cả' : maxPages})! Đang chuẩn bị chuyển...`);
+            addLog(`👉 Chuẩn bị lật sang trang tiếp theo sau 2 giây...`, "info");
             
-            // HÃ m tÃ¬m báº£ng dá»¯ liá»‡u chÃ­nh xÃ¡c
+            // Hàm tìm bảng dữ liệu chính xác
             function getDataTable() {
                 const tables = Array.from(document.querySelectorAll('table'));
-                return tables.find(t => t.textContent.includes('TrÃ­ch yáº¿u') && t.textContent.includes('Sá»‘ Ä‘áº¿n')) || document.querySelector('table');
+                return tables.find(t => t.innerText.includes('Trích yếu') && t.innerText.includes('Số đến')) || document.querySelector('table');
             }
             
             const mainTable = getDataTable();
@@ -533,26 +529,26 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
             setTimeout(() => {
                 nextBtn.click();
                 
-                // Äá» phÃ²ng trÆ°á»ng há»£p trang dÃ¹ng AJAX UpdatePanel (khÃ´ng táº£i láº¡i toÃ n bá»™ trang)
+                // Đề phòng trường hợp trang dùng AJAX UpdatePanel (không tải lại toàn bộ trang)
                 let checkCount = 0;
                 
-                // HÃ m Polling: Kiá»ƒm tra liÃªn tá»¥c xem báº£ng dá»¯ liá»‡u Ä‘Ã£ thay Ä‘á»•i (Load xong) chÆ°a
+                // Hàm Polling: Kiểm tra liên tục xem bảng dữ liệu đã thay đổi (Load xong) chưa
                 function checkTableChanged() {
                     const newTable = getDataTable();
                     const newTableHTML = newTable ? newTable.innerHTML : "";
                     
                     if (newTableHTML !== currentTableHTML && currentTableHTML !== "") {
-                        // Báº£ng Ä‘Ã£ thay Ä‘á»•i -> Láº­t trang thÃ nh cÃ´ng -> Láº­p tá»©c cháº¡y tiáº¿p
+                        // Bảng đã thay đổi -> Lật trang thành công -> Lập tức chạy tiếp
                         startScraping(apiUrl, concurrency);
                     } else {
                         checkCount++;
                         if (checkCount < 20) {
-                            // Dá»¯ liá»‡u chÆ°a Ä‘á»•i. Tiáº¿p tá»¥c chá» thÃªm 1 giÃ¢y.
+                            // Dữ liệu chưa đổi. Tiếp tục chờ thêm 1 giây.
                             window._ajaxCrawlTimeout = setTimeout(checkTableChanged, 1000);
                         } else {
-                            // Chá» 20 giÃ¢y rá»“i mÃ  khÃ´ng cÃ³ gÃ¬ thay Ä‘á»•i -> Cá»‘ gáº¯ng click láº¡i báº±ng Javascript thuáº§n (náº¿u href lÃ  javascript:)
+                            // Chờ 20 giây rồi mà không có gì thay đổi -> Cố gắng click lại bằng Javascript thuần (nếu href là javascript:)
                             if (checkCount === 20 && nextBtn.href && nextBtn.href.includes('javascript:')) {
-                                addLog(`â³ Thá»­ láº­t trang báº±ng lá»‡nh JS trá»±c tiáº¿p...`, "info");
+                                addLog(`⏳ Thử lật trang bằng lệnh JS trực tiếp...`, "info");
                                 location.href = nextBtn.href;
                                 checkCount++;
                                 window._ajaxCrawlTimeout = setTimeout(checkTableChanged, 1000);
@@ -560,31 +556,31 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                                 checkCount++;
                                 window._ajaxCrawlTimeout = setTimeout(checkTableChanged, 1000);
                             } else {
-                                addLog(`ðŸ ÄÃ£ click Trang Sau nhÆ°ng sau 25s dá»¯ liá»‡u khÃ´ng Ä‘á»•i (cÃ³ thá»ƒ Ä‘Ã£ á»Ÿ trang cuá»‘i). NgÄƒn cháº·n láº·p vÃ´ háº¡n.`, "success");
+                                addLog(`🏁 Đã click Trang Sau nhưng sau 25s dữ liệu không đổi (có thể đã ở trang cuối). Ngăn chặn lặp vô hạn.`, "success");
                                 sessionStorage.removeItem('QLVB_AUTO_CRAWL');
                                 sessionStorage.removeItem('QLVB_CONCURRENCY');
                                 updateProgress(100);
-                                updateStatus(`ðŸŽ‰ HOÃ€N Táº¤T! ÄÃ£ Ä‘á»“ng bá»™ toÃ n bá»™ cÃ¡c trang.`);
+                                updateStatus(`🎉 HOÀN TẤT! Đã đồng bộ toàn bộ các trang.`);
                             }
                         }
                     }
                 }
                 
-                // Báº¯t Ä‘áº§u vÃ²ng láº·p kiá»ƒm tra sau khi click 1 giÃ¢y
+                // Bắt đầu vòng lặp kiểm tra sau khi click 1 giây
                 window._ajaxCrawlTimeout = setTimeout(checkTableChanged, 1000);
                 
-                // Náº¿u trang lÃ  Full Reload (táº£i láº¡i toÃ n bá»™), sá»± kiá»‡n nÃ y sáº½ ngáº¯t timeout AJAX á»Ÿ trÃªn
+                // Nếu trang là Full Reload (tải lại toàn bộ), sự kiện này sẽ ngắt timeout AJAX ở trên
                 window.addEventListener("beforeunload", () => {
                     clearTimeout(window._ajaxCrawlTimeout);
                 });
             }, 2000);
         } else {
-            // KhÃ´ng cÃ²n trang nÃ o ná»¯a (Hoáº·c trang cuá»‘i cÃ¹ng)
+            // Không còn trang nào nữa (Hoặc trang cuối cùng)
             sessionStorage.removeItem('QLVB_AUTO_CRAWL');
             sessionStorage.removeItem('QLVB_CONCURRENCY');
             updateProgress(100);
-            updateStatus(`ðŸŽ‰ HOÃ€N Táº¤T TOÃ€N Bá»˜ CÃC TRANG! ÄÃ£ Ä‘áº©y xong.`);
-            addLog(`ðŸ KhÃ´ng tÃ¬m tháº¥y trang tiáº¿p theo (Ä‘Ã£ Ä‘áº¿n trang cuá»‘i). Dá»«ng tiáº¿n trÃ¬nh.`, "success");
+            updateStatus(`🎉 HOÀN TẤT TOÀN BỘ CÁC TRANG! Đã đẩy xong.`);
+            addLog(`🏁 Không tìm thấy trang tiếp theo (đã đến trang cuối). Dừng tiến trình.`, "success");
             
             chrome.runtime.sendMessage({
                 action: 'REPORT_FULLY_COMPLETE',
@@ -605,20 +601,20 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
     } catch (err) {
         sessionStorage.removeItem('QLVB_AUTO_CRAWL');
         sessionStorage.removeItem('QLVB_CONCURRENCY');
-        updateStatus(`âŒ Lá»—i há»‡ thá»‘ng`);
-        addLog(`âŒ Exception: ${err.toString()}`, "error");
+        updateStatus(`❌ Lỗi hệ thống`);
+        addLog(`❌ Exception: ${err.toString()}`, "error");
         if (sendResponseCallback) sendResponseCallback({ success: false, error: err.toString() });
     }
 }
 
-// Láº¯ng nghe lá»‡nh tá»« popup.js
+// Lắng nghe lệnh từ popup.js
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "START_SCRAPE") {
         const concurrency = request.concurrency || 4;
         const apiUrl = request.apiUrl;
         const existingKeys = request.existingKeys || [];
         
-        // KÃ­ch hoáº¡t cá» QuÃ©t tá»± Ä‘á»™ng
+        // Kích hoạt cờ Quét tự động
         sessionStorage.setItem('QLVB_AUTO_CRAWL', 'true');
         sessionStorage.setItem('QLVB_API_URL', apiUrl);
         sessionStorage.setItem('QLVB_CONCURRENCY', concurrency.toString());
@@ -629,7 +625,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 });
 
-// Tá»° Äá»˜NG KHá»žI CHáº Y (Náº¾U TRANG Vá»ªA Bá»Š FULL RELOAD DO CHUYá»‚N TRANG)
+// TỰ ĐỘNG KHỞI CHẠY (NẾU TRANG VỪA BỊ FULL RELOAD DO CHUYỂN TRANG)
 window.addEventListener('load', () => {
     if (sessionStorage.getItem('QLVB_AUTO_CRAWL') === 'true') {
         const apiUrl = sessionStorage.getItem('QLVB_API_URL') || "https://script.google.com/macros/s/AKfycbwh8G4ZN-ye5vey26m2JuTus93L63pfMFCoUoyX18kMRnPU6rZbuQCoSYuayFSFTYnl/exec";
@@ -639,35 +635,37 @@ window.addEventListener('load', () => {
             existingKeys = JSON.parse(sessionStorage.getItem('QLVB_EXISTING_KEYS') || '[]');
         } catch (e) {}
         
-        // Cáº§n chÃºt thá»i gian cho trang load xong háº³n
+        // Cần chút thời gian cho trang load xong hẳn
         setTimeout(() => {
             startScraping(apiUrl, concurrency, existingKeys);
         }, 1500);
     }
 });
 
+
+
 // ==========================================
-// Táº O NÃšT Äá»’NG Bá»˜ Ná»”I TRÃŠN TRANG VNPT
+// TẠO NÚT ĐỒNG BỘ NỔI TRÊN TRANG VNPT
 // ==========================================
 function injectFloatingButton() {
-    console.log("[QLVB Sync] Äang thá»­ táº¡o nÃºt ná»•i...");
-    // TrÃ¡nh táº¡o nhiá»u láº§n
+    console.log("[QLVB Sync] Đang thử tạo nút nổi...");
+    // Tránh tạo nhiều lần
     if (document.getElementById('qlvb-floating-sync-btn')) {
-        console.log("[QLVB Sync] NÃºt Ä‘Ã£ tá»“n táº¡i.");
+        console.log("[QLVB Sync] Nút đã tồn tại.");
         return;
     }
 
     const container = document.body || document.documentElement;
     if (!container) {
-        console.log("[QLVB Sync] KhÃ´ng tÃ¬m tháº¥y Body/HTML Ä‘á»ƒ chÃ¨n nÃºt.");
+        console.log("[QLVB Sync] Không tìm thấy Body/HTML để chèn nút.");
         return;
     }
 
     const btn = document.createElement('button');
     btn.id = 'qlvb-floating-sync-btn';
-    btn.innerHTML = 'ðŸš€ Äá»“ng bá»™ vá» Web App QLVB';
+    btn.innerHTML = '🚀 Đồng bộ về Web App QLVB';
     
-    // CSS cho nÃºt ná»•i
+    // CSS cho nút nổi
     btn.style.cssText = `
         position: fixed !important;
         bottom: 30px !important;
@@ -698,10 +696,10 @@ function injectFloatingButton() {
     };
 
     btn.onclick = () => {
-        let isSyncAll = confirm("Báº¡n cÃ³ muá»‘n Äá»’NG Bá»˜ Táº¤T Cáº¢ CÃC TRANG khÃ´ng?\n\n- Chá»n OK: QuÃ©t toÃ n bá»™ dá»¯ liá»‡u tá»« Ä‘áº§u Ä‘áº¿n cuá»‘i (Máº¥t nhiá»u thá»i gian).\n- Chá»n Cancel (Há»§y): Chá»‰ quÃ©t 2 trang Ä‘áº§u tiÃªn (DÃ¹ng Ä‘á»ƒ cáº­p nháº­t nhanh).");
+        let isSyncAll = confirm("Bạn có muốn ĐỒNG BỘ TẤT CẢ CÁC TRANG không?\n\n- Chọn OK: Quét toàn bộ dữ liệu từ đầu đến cuối (Mất nhiều thời gian).\n- Chọn Cancel (Hủy): Chỉ quét 2 trang đầu tiên (Dùng để cập nhật nhanh).");
         let maxPages = isSyncAll ? 9999 : 2;
         
-        console.log("[QLVB Sync] Báº¯t Ä‘áº§u Ä‘á»“ng bá»™ tá»« nÃºt ná»•i!");
+        console.log("[QLVB Sync] Bắt đầu đồng bộ từ nút nổi!");
         window._qlvbStopRequested = false;
         sessionStorage.setItem('QLVB_AUTO_CRAWL', 'true');
         sessionStorage.setItem('QLVB_API_URL', 'none');
@@ -712,22 +710,21 @@ function injectFloatingButton() {
     };
 
     container.appendChild(btn);
-    console.log("[QLVB Sync] ÄÃ£ chÃ¨n nÃºt ná»•i thÃ nh cÃ´ng vÃ o", container.tagName);
+    console.log("[QLVB Sync] Đã chèn nút nổi thành công vào", container.tagName);
 }
 
-// Quáº£n lÃ½ tráº¡ng thÃ¡i hiá»ƒn thá»‹ cá»§a nÃºt ná»•i liÃªn tá»¥c
+// Quản lý trạng thái hiển thị của nút nổi liên tục
 setInterval(() => {
-    // 1. Kiá»ƒm tra báº£ng vÄƒn báº£n cÃ³ tá»“n táº¡i khÃ´ng
-    const tables = Array.from(document.querySelectorAll('table'));
-    const isValidPage = tables.some(t => t.textContent.includes('TrÃ­ch yáº¿u') && t.textContent.includes('Sá»‘ Ä‘áº¿n'));
+    // 1. Kiểm tra bảng văn bản có tồn tại không
+    const isValidPage = document.querySelectorAll('tr[id^="vanban_id_"]').length > 0;
     
-    // 2. Kiá»ƒm tra Overlay cÃ³ Ä‘ang má»Ÿ khÃ´ng
+    // 2. Kiểm tra Overlay có đang mở không
     const overlay = document.getElementById('qlvb-sync-overlay');
     const isOverlayOpen = overlay && overlay.style.display !== 'none';
 
     let btn = document.getElementById('qlvb-floating-sync-btn');
     
-    // Náº¿u trang há»£p lá»‡ nhÆ°ng chÆ°a cÃ³ nÃºt, thÃ¬ táº¡o nÃºt
+    // Nếu trang hợp lệ nhưng chưa có nút, thì tạo nút
     if (isValidPage && !btn) {
         injectFloatingButton();
         btn = document.getElementById('qlvb-floating-sync-btn');
@@ -742,8 +739,5 @@ setInterval(() => {
     }
 }, 1000);
 
-
-
 } // End of window.qlvbContentScriptInjected check
-
 

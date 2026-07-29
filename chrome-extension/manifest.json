@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "QLVB Sync Google Sheets",
+  "name": "QLVB Sync Web qlvbpr",
   "version": "1.0",
-  "description": "Bóc tách văn bản từ Sở Tài nguyên và Môi trường Đồng Nai sang Web App QLVB Firebase.",
+  "description": "Bóc tách văn bản từ Web Quản lý & Điều Hành Đồng Nai sang Web App QLVB.",
   "icons": {
     "16": "icon.png",
     "48": "icon.png",

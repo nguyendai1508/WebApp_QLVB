@@ -100,18 +100,26 @@ export function Dashboard() {
     
     return staff.map((s: any) => {
       const name = s.Full_Name || s.fullName || s['Họ tên cán bộ'] || 'Cán bộ';
-      const staffTasks = tasks.filter((t: any) => t.Lead_Assignee === name);
+      const leadTasks = tasks.filter((t: any) => t.Lead_Assignee === name);
+      const coopTasks = tasks.filter((t: any) => {
+        const coAssignees = (t.Co_Assignee || '').split(',').map((str: string) => str.trim());
+        return coAssignees.includes(name);
+      });
       
-      const inProgress = staffTasks.filter((t: any) => ['Đang xử lý', 'Sắp hạn', 'Mới tiếp nhận', 'Chờ tiếp nhận'].includes(t.Status)).length;
-      const overdue = staffTasks.filter((t: any) => t.Status === 'Quá hạn').length;
-      const pendingApproval = staffTasks.filter((t: any) => t.Status === 'Chờ duyệt').length;
-      const completed = staffTasks.filter((t: any) => t.Status === 'Hoàn thành').length;
-      const total = staffTasks.length;
+      const allTasks = [...leadTasks, ...coopTasks];
+      
+      const inProgress = allTasks.filter((t: any) => ['Đang xử lý', 'Sắp hạn', 'Mới tiếp nhận', 'Chờ tiếp nhận', 'Xin gia hạn'].includes(t.Status)).length;
+      const overdue = allTasks.filter((t: any) => t.Status === 'Quá hạn').length;
+      const pendingApproval = allTasks.filter((t: any) => t.Status === 'Chờ duyệt').length;
+      const completed = allTasks.filter((t: any) => t.Status === 'Hoàn thành').length;
+      const total = allTasks.length;
       const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
       return {
         name,
         dept: s.Department || s['Phòng ban'] || 'Phòng chuyên môn',
+        leadCount: leadTasks.length,
+        coopCount: coopTasks.length,
         inProgress,
         overdue,
         pendingApproval,
@@ -449,6 +457,8 @@ export function Dashboard() {
                 <th className="px-4 py-3">Cán bộ chủ trì</th>
                 <th className="px-4 py-3">Đơn vị / Phòng ban</th>
                 <th className="px-4 py-3 text-center">Tổng việc</th>
+                <th className="px-4 py-3 text-center text-blue-700">Chủ trì</th>
+                <th className="px-4 py-3 text-center text-purple-700">Phối hợp</th>
                 <th className="px-4 py-3 text-center">Đang làm</th>
                 <th className="px-4 py-3 text-center">Chờ duyệt</th>
                 <th className="px-4 py-3 text-center">Quá hạn</th>
@@ -473,6 +483,8 @@ export function Dashboard() {
                     </td>
                     <td className="px-4 py-3 text-gray-500">{row.dept}</td>
                     <td className="px-4 py-3 text-center font-bold text-gray-900">{row.total}</td>
+                    <td className="px-4 py-3 text-center font-bold text-blue-700">{row.leadCount}</td>
+                    <td className="px-4 py-3 text-center font-bold text-purple-700">{row.coopCount}</td>
                     <td className="px-4 py-3 text-center font-semibold text-blue-600">{row.inProgress}</td>
                     <td className="px-4 py-3 text-center font-semibold text-amber-600">{row.pendingApproval}</td>
                     <td className="px-4 py-3 text-center font-bold text-rose-600">

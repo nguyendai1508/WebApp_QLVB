@@ -442,6 +442,12 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                  sessionStorage.removeItem('QLVB_AUTO_CRAWL');
                  updateProgress(100);
                  updateStatus(`🎉 HOÀN TẤT! Đã đồng bộ ${currentPage} trang.`);
+                 
+                 chrome.runtime.sendMessage({
+                     action: 'REPORT_FULLY_COMPLETE',
+                     created: successCount,
+                     skipped: skipCount
+                 });
                  return;
             }
             
@@ -514,6 +520,12 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
             updateProgress(100);
             updateStatus(`🎉 HOÀN TẤT TOÀN BỘ CÁC TRANG! Đã đẩy xong.`);
             addLog(`🏁 Không tìm thấy trang tiếp theo (đã đến trang cuối). Dừng tiến trình.`, "success");
+            
+            chrome.runtime.sendMessage({
+                action: 'REPORT_FULLY_COMPLETE',
+                created: successCount,
+                skipped: skipCount
+            });
             
             if (sendResponseCallback) {
                 sendResponseCallback({ 

@@ -54,7 +54,7 @@ const processStatus = (items: any[]) => {
   });
 };
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   user: null, 
   catalogs: [],
   staff: [],
@@ -87,49 +87,65 @@ export const useAppStore = create<AppState>((set) => ({
 
 
   initialize: async (silent = false) => {
+    const state = get();
+    if (state.isInitialized) return; // Chỉ khởi tạo listener 1 lần duy nhất
+    
     if (!silent) set({ isLoading: true });
+    
     try {
-      // Gọi song song các API để tải dữ liệu nhanh hơn
-      const [catalogsData, staffData, incomingData, outgoingData, tasksData, usersData] = await Promise.all([
-        api.getSetupData().catch(() => []),
-        api.getStaffList().catch(() => []),
-        api.getIncomingDocs().catch(() => []),
-        api.getOutgoingDocs().catch(() => []),
-        api.getTasks().catch(() => []),
-        api.getUsers().catch(() => [])
-      ]);
+      const { ref, onValue } = await import('firebase/database');
+      const { db } = await import('@/services/firebase');
+      
+      onValue(ref(db), (snapshot) => {
+        const data = snapshot.val() || {};
+        
+        // Parse data format
+        const catalogsData = Array.isArray(data.setup) ? data.setup.filter(Boolean) : Object.values(data.setup || {}).filter((v: any) => v && v.Type && v.Value);
+        const staffData = Object.keys(data.staff || {}).map(key => ({ id: key, ...data.staff[key] }));
+        const incomingData = Object.keys(data.incomingDocs || {}).map(key => ({ id: key, ...data.incomingDocs[key] }));
+        const outgoingData = Object.keys(data.outgoingDocs || {}).map(key => ({ id: key, ...data.outgoingDocs[key] }));
+        const tasksData = Object.keys(data.tasks || {}).map(key => ({ id: key, ...data.tasks[key] }));
+        const usersData = Object.keys(data.users || {}).map(key => ({ id: key, ...data.users[key] }));
 
-      const formattedStaff = (staffData || []).map((s: any) => ({
-          ...s,
-          Staff_ID: s.id || s.Staff_ID,
-          Full_Name: s.fullName || s.Full_Name,
-          Role: s.role || s.Role,
-          Department: s.department || s.Department,
-          Status: s.status || s.Status,
-          Phone: s.phone || s.Phone,
-          Email: s.email || s.Email,
-          Direct_Manager: s.manager || s.Direct_Manager,
-          Notes: s.notes || s.Notes
-      }));
+        const formattedStaff = staffData.map((s: any) => {
+            const matchedUser = usersData.find((u: any) => 
+              u['Mã cán bộ'] === (s.id || s.Staff_ID) || 
+              u.staffId === (s.id || s.Staff_ID)
+            );
+            
+            return {
+                ...s,
+                Staff_ID: s.id || s.Staff_ID,
+                Full_Name: s.fullName || s.Full_Name,
+                Role: s.role || s.Role,
+                Department: s.department || s.Department,
+                Status: s.status || s.Status,
+                Phone: s.phone || s.Phone,
+                Email: s.email || s.Email,
+                Direct_Manager: s.manager || s.Direct_Manager,
+                Notes: s.notes || s.Notes,
+                Username: matchedUser ? (matchedUser.username || matchedUser['Tên đăng nhập'] || '') : ''
+            };
+        });
 
-      const resolveStaffName = (idOrName: string) => {
-          if (!idOrName) return '';
-          const ids = idOrName.split(',').map(s => s.trim());
-          const names = ids.map(id => {
-              const staff = formattedStaff.find((s: any) => s.Staff_ID === id || s.id === id);
-              return staff ? (staff.Full_Name || staff.fullName) : id;
-          });
-          return names.join(', ');
-      };
+        const resolveStaffName = (idOrName: string) => {
+            if (!idOrName) return '';
+            const ids = idOrName.split(',').map(s => s.trim());
+            const names = ids.map(id => {
+                const staff = formattedStaff.find((s: any) => s.Staff_ID === id || s.id === id);
+                return staff ? (staff.Full_Name || staff.fullName) : id;
+            });
+            return names.join(', ');
+        };
 
-      set({
-        catalogs: catalogsData || [],
-        staff: formattedStaff,
-        incomingDocs: incomingData ? processStatus(incomingData.map((d: any) => ({
-            ...d,
-            Doc_ID: d.id || d.Doc_ID || '',
-            Sign_Number: d.signNumber || d.Sign_Number || '',
-            Draft_Date: d.docDate || d.Draft_Date || '',
+        set({
+          catalogs: catalogsData,
+          staff: formattedStaff,
+          incomingDocs: processStatus(incomingData.map((d: any) => ({
+              ...d,
+              Doc_ID: d.id || d.Doc_ID || '',
+              Sign_Number: d.signNumber || d.Sign_Number || '',
+              Draft_Date: d.docDate || d.Draft_Date || '',
             Receive_Date: d.receiveDate || d.Receive_Date || '',
             Summary: d.summary || d.Summary || '',
             Issuer: d.issuer || d.Issuer || '',
@@ -149,7 +165,7 @@ export const useAppStore = create<AppState>((set) => ({
             Notes: d.notes || d.Notes || '',
             File_Name: d.files ? d.files.map((f:any) => f.fileName).join(',') : (d.File_Name || ''),
             File_URL: d.files ? d.files.map((f:any) => f.url || f.fileBase64).join(',') : (d.File_URL || '')
-        }))) : [],
+        }))),
         outgoingDocs: (outgoingData || []).map((d: any) => ({
             ...d,
             Doc_ID: d.id || d.Doc_ID || '',
@@ -171,7 +187,7 @@ export const useAppStore = create<AppState>((set) => ({
             File_Name: d.files ? d.files.map((f:any) => f.fileName).join(',') : (d.File_Name || ''),
             File_URL: d.files ? d.files.map((f:any) => f.url || f.fileBase64).join(',') : (d.File_URL || '')
         })),
-        tasks: tasksData ? processStatus(tasksData.map((t: any) => ({
+        tasks: processStatus(tasksData.map((t: any) => ({
             ...t,
             Task_ID: t.id || t.Task_ID || '',
             Source: t.source || t.Source || '',
@@ -192,24 +208,15 @@ export const useAppStore = create<AppState>((set) => ({
             Related_Outgoing_Doc: t.relatedOutgoingDoc || t.Related_Outgoing_Doc || '',
             Notes: t.notes || t.Notes || '',
             Created_By: t.createdBy || t.Created_By || ''
-        }))) : [],
-        users: (usersData || []).map((u: any) => ({
-            ...u,
-            'Mã người dùng': u.id || u['Mã người dùng'] || '',
-            'Tên đăng nhập': u.username || u['Tên đăng nhập'] || '',
-            'Mật khẩu': u.password || u['Mật khẩu'] || '',
-            'Mã cán bộ': u.staffId || u['Mã cán bộ'] || '',
-            'Họ tên cán bộ': u.fullName || u['Họ tên cán bộ'] || '',
-            'Tên người dùng': u.displayName || u['Tên người dùng'] || '',
-            'Phạm vi dữ liệu': u.dataScope || u['Phạm vi dữ liệu'] || '',
-            'Phân quyền': u.role || u['Phân quyền'] || ''
-        })),
+        }))),
+        users: usersData || [],
+        isLoading: false,
         isInitialized: true
       });
-    } catch (error) {
-      console.error('Lỗi khởi tạo dữ liệu:', error);
-    } finally {
-      if (!silent) set({ isLoading: false });
+    });
+    } catch(e) {
+      console.error("Lỗi khi kết nối Realtime Database", e);
+      set({ isLoading: false });
     }
   },
 

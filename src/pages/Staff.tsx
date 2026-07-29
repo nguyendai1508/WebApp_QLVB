@@ -162,6 +162,9 @@ export function Staff() {
               </div>
               <div>
                 <h3 className="font-bold text-primary text-sm line-clamp-1" title={person.Full_Name}>{person.Full_Name}</h3>
+                {person.Username && (
+                  <p className="text-[11px] font-mono text-gray-400 mt-0.5 line-clamp-1">@{person.Username}</p>
+                )}
                 <p className="text-xs text-gray-500 mt-1 line-clamp-1">{person.Role || 'Công chức'}</p>
                 <p className="text-xs text-gray-500 line-clamp-1">{person.Department || 'UBND Xã'}</p>
                 <div className="mt-2">

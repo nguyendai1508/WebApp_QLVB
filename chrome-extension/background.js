@@ -44,6 +44,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         broadcastProgress('SYNC_PROGRESS', request.message, request.percent, request.logType);
     }
     
+    if (request.action === 'REPORT_FULLY_COMPLETE') {
+        broadcastProgress('SYNC_COMPLETE', `✅ HOÀN TẤT TẤT CẢ! Đã thêm: ${request.created}, Bỏ qua: ${request.skipped}`);
+    }
+    
     // Nhận dữ liệu cào được và xử lý TRỰC TIẾP LƯU VÀO FIREBASE
     if (request.action === 'SYNC_DATA') {
         const batchDocs = request.data;
@@ -88,8 +92,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         explicitUsername = usernameMatch[1].trim();
                     }
                     
-                    const cleanNameLower = cleanName.toLowerCase();
-                    const staff = staffList.find(s => (s.Full_Name || s.fullName)?.toLowerCase() === cleanNameLower);
+                    // Ưu tiên kiểm tra trùng lặp bằng Username (chính xác 100%)
+                    if (explicitUsername) {
+                        const existingUser = usersList.find(u => u.username === explicitUsername || u['Tên đăng nhập'] === explicitUsername);
+                        if (existingUser) {
+                            const staffIdToFind = existingUser.staffId || existingUser['Mã cán bộ'];
+                            const existingStaff = staffList.find(s => s.Staff_ID === staffIdToFind || s.id === staffIdToFind);
+                            if (existingStaff) {
+                                return existingStaff.id;
+                            }
+                        }
+                    }
+                    
+                    // Nếu không có username (hoặc chưa tìm thấy), mới fallback sang dò tên
+                    const cleanNameLower = cleanName.normalize('NFC').toLowerCase();
+                    const staff = staffList.find(s => (s.Full_Name || s.fullName)?.normalize('NFC').toLowerCase() === cleanNameLower);
                     
                     if (staff) {
                         return staff.id;
@@ -185,7 +202,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         }
                     }
 
-                    const assigneeId = await getStaffId(doc.nguoiSoan);
+                    // Xử lý list ID cho Lead_Assignee (vì có thể có nhiều người)
+                    const leadIdList = [];
+                    if (doc.nguoiSoan) {
+                        const leadArr = doc.nguoiSoan.split(',').filter(x => x.trim() !== '');
+                        for (const leadName of leadArr) {
+                            const lId = await getStaffId(leadName.trim());
+                            if (lId) leadIdList.push(lId);
+                        }
+                    }
+                    const assigneeId = leadIdList.join(', ');
 
                     // Xử lý list ID cho Co_Assignee
                     const coIdList = [];
@@ -222,15 +248,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     
                     const newDocId = docSaveRes.name;
 
-                    // Tạo Task chủ trì
-                    if (assigneeId) {
-                        await fetch(`${FIREBASE_URL}/tasks.json`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                Source: 'Văn bản đến', Linked_Doc_ID: newDocId, Category: 'Văn bản chỉ đạo', Priority: doc.doKhan || 'Bình thường', Status: 'Đang xử lý', Lead_Assignee: assigneeId, Role: 'Chủ trì', Deadline: doc.deadline || '', createdAt: new Date().toISOString()
-                            })
-                        });
+                    // Tạo Task chủ trì cho từng người
+                    for (const lId of leadIdList) {
+                        if (lId) {
+                            await fetch(`${FIREBASE_URL}/tasks.json`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    Source: 'Văn bản đến', Linked_Doc_ID: newDocId, Category: 'Văn bản chỉ đạo', Priority: doc.doKhan || 'Bình thường', Status: 'Đang xử lý', Lead_Assignee: lId, Role: 'Chủ trì', Deadline: doc.deadline || '', createdAt: new Date().toISOString()
+                                })
+                            });
+                        }
                     }
 
                     // Tạo Task phối hợp
@@ -247,12 +275,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     }
                 }
                 
-                // Đồng bộ xong thì bắn tín hiệu sang các tab Web App đang mở (nếu có) để chúng tự Refresh giao diện
-                chrome.tabs.query({ url: ["*://qlvb.io.vn/*", "*://qlvbpr.io.vn/*", "*://localhost/*", "*://script.google.com/*", "*://*.script.googleusercontent.com/*"] }, (tabs) => {
-                    for (const tab of tabs) {
-                        chrome.tabs.sendMessage(tab.id, { type: 'SYNC_COMPLETE' }).catch(() => {});
-                    }
-                });
+                // Dữ liệu đã lưu Firebase. Web App sẽ tự động cập nhật qua Realtime Database Listener!
+                // Không gửi SYNC_COMPLETE ở đây nữa vì sẽ làm tắt thanh progress quá sớm (khi mới xong batch 1).
                 
             } catch (err) {
                 console.error("Lỗi khi lưu Firebase trực tiếp từ Extension:", err);
@@ -327,10 +351,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                         txt.innerHTML = htmlData;
                                         const decodedHtml = txt.value;
                                         
-                                        // Tìm Đồng xử lý
-                                        const match = htmlData.match(/&#272;&#7891;ng x&#7917; l&#253;: (.*?)<\/p>/);
-                                        if (match && match[1]) {
-                                            const namesHtml = match[1];
+                                        // Tìm Đồng xử lý hoặc Đồng gửi
+                                        const coAssigneeMatch = decodedHtml.match(/(?:Đồng xử lý|Đồng gửi)\s*:\s*(.*?)<\/p>/i);
+                                        if (coAssigneeMatch && coAssigneeMatch[1]) {
+                                            const namesHtml = coAssigneeMatch[1];
                                             const spanRegex = /<span class="c-blue">([^<]+)<\/span>/g;
                                             let m;
                                             while ((m = spanRegex.exec(namesHtml)) !== null) {

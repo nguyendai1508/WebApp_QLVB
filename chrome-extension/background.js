@@ -358,8 +358,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                             leadAssigneeLog = cleanLead;
                                         }
 
-                                        // Tìm TẤT CẢ Đồng xử lý và Đồng gửi trong toàn bộ lịch sử (có thể có nhiều dòng)
-                                        const coAssigneeRegex = /(?:Đồng xử lý|Đồng gửi)\s*:\s*(.*?)<\/p>/gi;
+                                        // Tìm TẤT CẢ Đồng xử lý trong toàn bộ lịch sử (bỏ qua Đồng gửi vì thường gửi toàn cơ quan)
+                                        const coAssigneeRegex = /(?:Đồng xử lý)\s*:\s*(.*?)<\/p>/gi;
                                         let allCoAssignees = [];
                                         let matchResult;
                                         while ((matchResult = coAssigneeRegex.exec(decodedHtml)) !== null) {

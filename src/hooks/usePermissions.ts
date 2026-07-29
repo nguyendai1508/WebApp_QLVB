@@ -3,7 +3,7 @@ import { useAppStore } from '@/store/useAppStore';
 export function usePermissions() {
   const { user } = useAppStore();
   
-  const role = user?.Role || 'Admin'; // Default to Admin for dev/testing if null
+  const role = user?.Role || user?.role || user?.['Phân quyền'] || user?.['Quyền hạn'] || 'Chuyên viên'; // Default to Admin for dev/testing if null
 
   const isAdmin = role === 'Admin';
   const isVanThu = role === 'Văn thư';

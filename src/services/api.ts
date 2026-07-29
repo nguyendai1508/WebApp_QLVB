@@ -146,9 +146,30 @@ export const api = {
   // Auth
   login: async (credentials: any) => {
     const users = await getList('users');
-    const user = users.find(u => u.username === credentials.username && u.password === credentials.password);
-    if (user) {
-        return { success: true, user: user };
+    const uInput = (credentials.username || '').trim().toLowerCase();
+    const pInput = (credentials.password || '').trim();
+
+    const found = users.find((u: any) => {
+      const uName = (u.username || u.Username || u['Tên đăng nhập'] || '').trim().toLowerCase();
+      const uPass = (u.password || u.Password || u['Mật khẩu'] || '').trim();
+      return uName === uInput && uPass === pInput;
+    });
+
+    if (found) {
+      const role = found.role || found.Role || found['Phân quyền'] || found['Quyền hạn'] || 'Chuyên viên';
+      const fullName = found.fullName || found.FullName || found.Full_Name || found['Họ tên cán bộ'] || found['Tên người dùng'] || found.username || found['Tên đăng nhập'] || 'Cán bộ';
+      const username = found.username || found.Username || found['Tên đăng nhập'] || uInput;
+      const normalized = {
+        ...found,
+        username,
+        Username: username,
+        fullName,
+        FullName: fullName,
+        Full_Name: fullName,
+        role,
+        Role: role
+      };
+      return { success: true, user: normalized };
     }
     // Hardcode admin as fallback if empty DB
     if (credentials.username === 'admin' && credentials.password === '123') {

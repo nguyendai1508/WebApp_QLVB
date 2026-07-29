@@ -95,8 +95,8 @@ export function Topbar() {
           )}
           <div className="flex items-center gap-4 pl-4 border-l ml-2">
           <div className="text-right hidden sm:block">
-            <p className="text-sm font-bold text-gray-900">{user?.Username || 'Người dùng'}</p>
-            <p className="text-xs text-gray-500">{user?.Role || 'Role'}</p>
+            <p className="text-sm font-bold text-gray-900">{user?.FullName || user?.['Họ tên cán bộ'] || user?.Username || 'Người dùng'}</p>
+            <p className="text-xs text-gray-500 font-medium">{user?.Role || user?.['Phân quyền'] || 'Chuyên viên'}</p>
           </div>
           <button 
             onClick={handleLogout}

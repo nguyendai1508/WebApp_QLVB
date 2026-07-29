@@ -65,7 +65,23 @@ export const useAppStore = create<AppState>((set, get) => ({
   isLoading: false,
   isInitialized: false,
 
-  setUser: (user) => set({ user }),
+  setUser: (user) => {
+    if (!user) return set({ user: null });
+    const role = user.role || user.Role || user['Phân quyền'] || user['Quyền hạn'] || 'Chuyên viên';
+    const fullName = user.fullName || user.FullName || user.Full_Name || user['Họ tên cán bộ'] || user['Tên người dùng'] || user.username || user['Tên đăng nhập'] || 'Người dùng';
+    const username = user.username || user.Username || user['Tên đăng nhập'] || '';
+    const normalized = {
+      ...user,
+      username,
+      Username: username,
+      fullName,
+      FullName: fullName,
+      Full_Name: fullName,
+      role,
+      Role: role
+    };
+    set({ user: normalized });
+  },
   setIsLoading: (loading) => set({ isLoading: loading }),
 
   deleteCatalog: async (type: string, value: string) => {

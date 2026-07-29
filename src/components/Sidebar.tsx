@@ -96,8 +96,8 @@ export function Sidebar() {
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap overflow-hidden">
-            <p className="text-sm font-medium text-gray-900">{user?.Role || 'Admin'}</p>
-            <p className="text-xs text-gray-500">{user?.FullName || user?.Username || 'Người dùng'}</p>
+            <p className="text-sm font-bold text-gray-900">{user?.FullName || user?.['Họ tên cán bộ'] || user?.Username || 'Người dùng'}</p>
+            <p className="text-xs text-gray-500 font-medium">{user?.Role || user?.['Phân quyền'] || 'Chuyên viên'}</p>
           </div>
         </div>
       </div>

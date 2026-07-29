@@ -35,6 +35,15 @@ const deleteItem = async (path: string, id: string): Promise<ApiResponse> => {
   return { success: true, message: 'Thành công' };
 };
 
+const deleteMultipleItems = async (path: string, ids: string[]): Promise<ApiResponse> => {
+  const updates: any = {};
+  ids.forEach(id => {
+    updates[`${path}/${id}`] = null;
+  });
+  await update(ref(db), updates);
+  return { success: true, message: 'Thành công' };
+};
+
 export const api = {
   // Queries
   getSetupData: async () => {
@@ -61,6 +70,7 @@ export const api = {
   createIncomingDoc: (data: any) => createItem('incomingDocs', data),
   updateIncomingDoc: (id: string, data: any) => updateItem('incomingDocs', id, data),
   deleteIncomingDoc: (id: string) => deleteItem('incomingDocs', id),
+  deleteMultipleIncomingDocs: (ids: string[]) => deleteMultipleItems('incomingDocs', ids),
   
   createOutgoingDoc: (data: any) => createItem('outgoingDocs', data),
   updateOutgoingDoc: (id: string, data: any) => updateItem('outgoingDocs', id, data),
@@ -69,6 +79,7 @@ export const api = {
   createTask: (data: any) => createItem('tasks', data),
   updateTask: (id: string, data: any) => updateItem('tasks', id, data),
   deleteTask: (id: string) => deleteItem('tasks', id),
+  deleteMultipleTasks: (ids: string[]) => deleteMultipleItems('tasks', ids),
   
   // Setup / Catalogs
   addSetupData: async (data: any) => {

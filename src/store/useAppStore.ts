@@ -99,20 +99,32 @@ export const useAppStore = create<AppState>((set) => ({
         api.getUsers().catch(() => [])
       ]);
 
+      const formattedStaff = (staffData || []).map((s: any) => ({
+          ...s,
+          Staff_ID: s.id || s.Staff_ID,
+          Full_Name: s.fullName || s.Full_Name,
+          Role: s.role || s.Role,
+          Department: s.department || s.Department,
+          Status: s.status || s.Status,
+          Phone: s.phone || s.Phone,
+          Email: s.email || s.Email,
+          Direct_Manager: s.manager || s.Direct_Manager,
+          Notes: s.notes || s.Notes
+      }));
+
+      const resolveStaffName = (idOrName: string) => {
+          if (!idOrName) return '';
+          const ids = idOrName.split(',').map(s => s.trim());
+          const names = ids.map(id => {
+              const staff = formattedStaff.find((s: any) => s.Staff_ID === id || s.id === id);
+              return staff ? (staff.Full_Name || staff.fullName) : id;
+          });
+          return names.join(', ');
+      };
+
       set({
         catalogs: catalogsData || [],
-        staff: (staffData || []).map((s: any) => ({
-            ...s,
-            Staff_ID: s.id || s.Staff_ID,
-            Full_Name: s.fullName || s.Full_Name,
-            Role: s.role || s.Role,
-            Department: s.department || s.Department,
-            Status: s.status || s.Status,
-            Phone: s.phone || s.Phone,
-            Email: s.email || s.Email,
-            Direct_Manager: s.manager || s.Direct_Manager,
-            Notes: s.notes || s.Notes
-        })),
+        staff: formattedStaff,
         incomingDocs: incomingData ? processStatus(incomingData.map((d: any) => ({
             ...d,
             Doc_ID: d.id || d.Doc_ID || '',
@@ -127,8 +139,8 @@ export const useAppStore = create<AppState>((set) => ({
             Security: d.security || d.Security || '',
             Assigner: d.assigner || d.Assigner || '',
             Lead_Department: d.leadDepartment || d.Lead_Department || '',
-            Lead_Assignee: d.leadAssignee || d.Lead_Assignee || '',
-            Co_Assignee: d.coAssignee || d.Co_Assignee || '',
+            Lead_Assignee: resolveStaffName(d.leadAssignee || d.Lead_Assignee || d.Assignee_ID || ''),
+            Co_Assignee: resolveStaffName(d.coAssignee || d.Co_Assignee || d.Co_Assignees || ''),
             Deadline: d.deadline || d.Deadline || '',
             Status: d.status || d.Status || '',
             Result: d.result || d.Result || '',
@@ -169,8 +181,8 @@ export const useAppStore = create<AppState>((set) => ({
             Priority: t.priority || t.Priority || '',
             Assigner: t.assigner || t.Assigner || '',
             Lead_Department: t.leadDepartment || t.Lead_Department || '',
-            Lead_Assignee: t.leadAssignee || t.Lead_Assignee || '',
-            Co_Assignee: t.coAssignee || t.Co_Assignee || '',
+            Lead_Assignee: resolveStaffName(t.leadAssignee || t.Lead_Assignee || t.Assignee_ID || ''),
+            Co_Assignee: resolveStaffName(t.coAssignee || t.Co_Assignee || t.Co_Assignees || ''),
             Assign_Date: t.assignDate || t.Assign_Date || '',
             Deadline: t.deadline || t.Deadline || '',
             Actual_Complete_Date: t.actualCompleteDate || t.Actual_Complete_Date || '',

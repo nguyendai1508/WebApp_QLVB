@@ -34,6 +34,7 @@ export function IncomingDocs() {
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
   const [editingDoc, setEditingDoc] = useState<any>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const { initialize, setIsLoading } = useAppStore();
   const permissions = usePermissions();
 
@@ -127,6 +128,7 @@ export function IncomingDocs() {
         const res = await api.deleteIncomingDoc(docId);
         if (res.success) {
           await initialize();
+          setSelectedIds(prev => prev.filter(id => id !== docId));
         } else {
           alert('Lỗi: ' + res.message);
         }
@@ -136,6 +138,41 @@ export function IncomingDocs() {
         setIsLoading(false);
       }
     }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (window.confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} văn bản đến đã chọn?`)) {
+      try {
+        setIsLoading(true);
+        const { api } = await import('@/services/api');
+        const res = await api.deleteMultipleIncomingDocs(selectedIds);
+        if (res.success) {
+          await initialize();
+          setSelectedIds([]);
+        } else {
+          alert('Lỗi: ' + res.message);
+        }
+      } catch (error) {
+        alert('Có lỗi xảy ra!');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(filteredDocs.map(d => d.id || d.Doc_ID));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectRow = (docId: string) => {
+    setSelectedIds(prev => 
+      prev.includes(docId) ? prev.filter(id => id !== docId) : [...prev, docId]
+    );
   };
 
   const handleEdit = (doc: any) => {
@@ -217,6 +254,14 @@ export function IncomingDocs() {
           <h3 className="font-bold text-gray-900">Danh sách văn bản đến</h3>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-500">{filteredDocs.length} bản ghi</span>
+            {permissions.canDelete && selectedIds.length > 0 && (
+              <button 
+                onClick={handleBulkDelete}
+                className="flex items-center gap-2 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg transition-colors text-sm font-medium"
+              >
+                <Trash2 className="w-4 h-4" /> Xóa {selectedIds.length} mục
+              </button>
+            )}
             <button 
               onClick={handleRefresh}
               disabled={isRefreshing}
@@ -231,12 +276,21 @@ export function IncomingDocs() {
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-gray-500 border-b bg-white">
               <tr>
+                <th className="px-4 py-3 font-medium w-10 text-center">
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-gray-300 text-primary focus:ring-primary cursor-pointer w-4 h-4"
+                    checked={filteredDocs.length > 0 && selectedIds.length === filteredDocs.length}
+                    onChange={handleSelectAll}
+                  />
+                </th>
                 <th className="px-4 py-3 font-medium">Mã VB đến</th>
                 <th className="px-4 py-3 font-medium">Số/Ký hiệu</th>
                 <th className="px-4 py-3 font-medium">Ngày đến</th>
                 <th className="px-4 py-3 font-medium">Trích yếu</th>
                 <th className="px-4 py-3 font-medium">Cơ quan ban hành</th>
                 <th className="px-4 py-3 font-medium">Cán bộ chủ trì</th>
+                <th className="px-4 py-3 font-medium">Cán bộ đồng xử lý</th>
                 <th className="px-4 py-3 font-medium">Hạn xử lý</th>
                 <th className="px-4 py-3 font-medium text-center">Trạng thái</th>
                 <th className="px-4 py-3 font-medium text-center">Cảnh báo</th>
@@ -247,6 +301,14 @@ export function IncomingDocs() {
             <tbody className="divide-y">
               {filteredDocs.map((doc, idx) => (
                 <tr key={idx} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 text-center">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-gray-300 text-primary focus:ring-primary cursor-pointer w-4 h-4"
+                      checked={selectedIds.includes(doc.id || doc.Doc_ID)}
+                      onChange={() => handleSelectRow(doc.id || doc.Doc_ID)}
+                    />
+                  </td>
                   <td className="px-4 py-3 text-gray-500">{doc.Doc_ID}</td>
                   <td className="px-4 py-3 font-medium text-gray-900">{doc.Sign_Number}</td>
                   <td className="px-4 py-3 text-gray-500">{doc.Draft_Date}</td>
@@ -257,6 +319,11 @@ export function IncomingDocs() {
                   <td className="px-4 py-3">
                     <span className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium">
                       {doc.Lead_Assignee || 'Chưa có'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium max-w-[150px] line-clamp-2" title={doc.Co_Assignee}>
+                      {doc.Co_Assignee || 'Chưa có'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-gray-600">{doc.Deadline}</td>

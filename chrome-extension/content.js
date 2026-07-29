@@ -152,11 +152,11 @@ function getCoAssigneesForDoc(doc_id) {
             doc_id: doc_id,
             scriptType: 'getCoAssignees'
         }, (response) => {
-            resolve(response || []);
+            resolve(response || { coAssignees: [], deadline: '' });
         });
         
         // Bắt lỗi timeout an toàn
-        setTimeout(() => resolve([]), 5000);
+        setTimeout(() => resolve({ coAssignees: [], deadline: '' }), 5000);
     });
 }
 // Bóc tách bảng dữ liệu theo cấu trúc VNPT Đồng Nai
@@ -317,11 +317,15 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                     fileTasks.push({ itemIndex: i, f: f });
                 }
                 
-                // Lấy Đồng xử lý
-                const coAssignees = await getCoAssigneesForDoc(items[i].doc_id);
+                // Lấy Đồng xử lý và Hạn xử lý
+                const { coAssignees, deadline } = await getCoAssigneesForDoc(items[i].doc_id);
                 if (coAssignees && coAssignees.length > 0) {
                     docsPayload[i].coAssignee = coAssignees.join(', ');
                     addLog(`👥 Đã tìm thấy ${coAssignees.length} Đồng xử lý.`, "success");
+                }
+                if (deadline) {
+                    docsPayload[i].deadline = deadline;
+                    addLog(`⏳ Tìm thấy Hạn xử lý: ${deadline}`, "success");
                 }
             }
         }
@@ -361,7 +365,7 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
             updateProgress(85);
             addLog(`🚀 Bắt đầu gửi ${docsPayload.length} văn bản...`, "info");
 
-            const BATCH_SIZE = 5;
+            const BATCH_SIZE = 1;
             let docsSent = 0;
             const batches = [];
             for (let i = 0; i < docsPayload.length; i += BATCH_SIZE) {

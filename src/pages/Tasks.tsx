@@ -87,6 +87,7 @@ export function Tasks() {
   const [deadlineFilter, setDeadlineFilter] = useState('Tất cả');
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
@@ -122,6 +123,7 @@ export function Tasks() {
           const res = await api.deleteTask(taskId);
           if (res.success) {
             await initialize();
+            setSelectedIds(prev => prev.filter(id => id !== taskId));
           } else {
             alert('Lỗi: ' + res.message);
           }
@@ -133,6 +135,48 @@ export function Tasks() {
         }
       }
     });
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.length === 0) return;
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Xóa hàng loạt',
+      message: `Bạn có chắc chắn muốn xóa ${selectedIds.length} công việc đã chọn?`,
+      type: 'danger',
+      confirmText: 'Xóa',
+      onConfirm: async () => {
+        try {
+          setIsLoading(true);
+          const { api } = await import('@/services/api');
+          const res = await api.deleteMultipleTasks(selectedIds);
+          if (res.success) {
+            await initialize();
+            setSelectedIds([]);
+          } else {
+            alert('Lỗi: ' + res.message);
+          }
+        } catch (error) {
+          alert('Có lỗi xảy ra!');
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    });
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>, currentTasks: any[]) => {
+    if (e.target.checked) {
+      setSelectedIds(currentTasks.map(d => d.id || d.Task_ID));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectRow = (taskId: string) => {
+    setSelectedIds(prev => 
+      prev.includes(taskId) ? prev.filter(id => id !== taskId) : [...prev, taskId]
+    );
   };
 
   // Helper map từ Task object sang payload API (camelCase)
@@ -378,6 +422,8 @@ export function Tasks() {
     return sortableTasks;
   }, [filteredTasks, sortConfig]);
 
+  const paginatedTasks = sortedTasks.slice(0, displayLimit);
+
   const requestSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -534,13 +580,29 @@ export function Tasks() {
                 <option value={999999}>Tất cả</option>
               </select>
             </div>
-            <span className="text-sm font-medium text-gray-500 border-l pl-4">{filteredTasks.length} bản ghi</span>
+            <span className="text-sm font-medium text-gray-500 border-l pl-4 border-r pr-4">{filteredTasks.length} bản ghi</span>
+            {permissions.canDelete && selectedIds.length > 0 && (
+              <button 
+                onClick={handleBulkDelete}
+                className="flex items-center gap-2 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg transition-colors text-sm font-medium"
+              >
+                <Trash2 className="w-4 h-4" /> Xóa {selectedIds.length} mục
+              </button>
+            )}
           </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-gray-500 border-b bg-white">
               <tr>
+                <th className="px-2 py-3 font-medium w-10 text-center">
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-gray-300 text-primary focus:ring-primary cursor-pointer w-4 h-4"
+                    checked={paginatedTasks.length > 0 && selectedIds.length === paginatedTasks.length}
+                    onChange={(e) => handleSelectAll(e, paginatedTasks)}
+                  />
+                </th>
                 <th className="px-2 py-3 font-medium cursor-pointer hover:bg-gray-50" onClick={() => requestSort('Task_ID')}>
                   <div className="flex items-center gap-1">Mã việc <ArrowUpDown className={`w-3 h-3 ${sortConfig?.key === 'Task_ID' ? 'text-primary' : 'text-gray-400'}`} /></div>
                 </th>
@@ -583,8 +645,16 @@ export function Tasks() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {sortedTasks.slice(0, displayLimit).map((task, idx) => (
+              {paginatedTasks.map((task, idx) => (
                 <tr key={idx} className="hover:bg-gray-50">
+                  <td className="px-2 py-3 text-center">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-gray-300 text-primary focus:ring-primary cursor-pointer w-4 h-4"
+                      checked={selectedIds.includes(task.id || task.Task_ID)}
+                      onChange={() => handleSelectRow(task.id || task.Task_ID)}
+                    />
+                  </td>
                   <td className="px-2 py-3 text-gray-500 whitespace-nowrap">{task.Task_ID}</td>
                   <td className="px-2 py-3 text-center">
                     {task.Priority && task.Priority !== 'Bình thường' ? (

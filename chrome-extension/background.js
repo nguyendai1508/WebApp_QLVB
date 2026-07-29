@@ -52,19 +52,91 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         (async () => {
             try {
                 // Lấy danh sách văn bản và nhân viên hiện tại
-                const [docsRes, staffRes] = await Promise.all([
+                const [docsRes, staffRes, usersRes] = await Promise.all([
                     fetch(`${FIREBASE_URL}/incomingDocs.json`).then(r => r.json()),
-                    fetch(`${FIREBASE_URL}/staff.json`).then(r => r.json())
+                    fetch(`${FIREBASE_URL}/staff.json`).then(r => r.json()),
+                    fetch(`${FIREBASE_URL}/users.json`).then(r => r.json())
                 ]);
                 
                 const existingDocs = docsRes ? Object.values(docsRes) : [];
                 const staffList = staffRes ? Object.keys(staffRes).map(k => ({ id: k, ...staffRes[k] })) : [];
-                
-                const getStaffId = (name) => {
+                const usersList = usersRes ? Object.keys(usersRes).map(k => ({ id: k, ...usersRes[k] })) : [];
+
+                const removeAccents = (str) => {
+                    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D");
+                };
+
+                const generateUsername = (fullName) => {
+                    let base = removeAccents(fullName).toLowerCase().replace(/\s+/g, '');
+                    let username = base;
+                    let count = 1;
+                    while (usersList.some(u => u.username === username || u['Tên đăng nhập'] === username)) {
+                        username = base + count;
+                        count++;
+                    }
+                    return username;
+                };
+
+                const getStaffId = async (name) => {
                     if (!name) return '';
-                    const cleanName = name.split('(')[0].trim().toLowerCase();
-                    const staff = staffList.find(s => (s.Full_Name || s.fullName)?.toLowerCase() === cleanName);
-                    return staff ? staff.id : name;
+                    const cleanName = name.split('(')[0].trim();
+                    const cleanNameLower = cleanName.toLowerCase();
+                    const staff = staffList.find(s => (s.Full_Name || s.fullName)?.toLowerCase() === cleanNameLower);
+                    
+                    if (staff) {
+                        return staff.id;
+                    }
+                    
+                    // Nếu chưa có -> Tự động tạo Cán bộ và Người dùng
+                    const newStaffId = `AUTO-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+                    const username = generateUsername(cleanName);
+                    
+                    const newStaff = {
+                        Full_Name: cleanName,
+                        Staff_ID: newStaffId,
+                        Department: '',
+                        Role: 'Chuyên viên'
+                    };
+
+                    const newUser = {
+                        "Mã cán bộ": newStaffId,
+                        "Mã người dùng": newStaffId,
+                        "Mật khẩu": "123456",
+                        "Phạm vi dữ liệu": "Tất cả",
+                        "Phân quyền": "Chuyên viên",
+                        "Tên người dùng": cleanName,
+                        "Tên đăng nhập": username,
+                        "username": username,
+                        "password": "123456",
+                        "fullName": cleanName,
+                        "role": "Chuyên viên",
+                        "staffId": newStaffId
+                    };
+                    
+                    try {
+                        const staffResData = await fetch(`${FIREBASE_URL}/staff.json`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(newStaff)
+                        }).then(r => r.json());
+                        
+                        const newFirebaseStaffId = staffResData.name;
+
+                        await fetch(`${FIREBASE_URL}/users.json`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(newUser)
+                        });
+
+                        // Cập nhật mảng local để không bị tạo trùng nếu vòng lặp tiếp theo gặp lại người này
+                        staffList.push({ id: newFirebaseStaffId, ...newStaff });
+                        usersList.push({ id: newStaffId, ...newUser });
+                        
+                        return newFirebaseStaffId;
+                    } catch (err) {
+                        console.error('Lỗi khi tự động tạo cán bộ/người dùng', err);
+                        return cleanName;
+                    }
                 };
 
                 for (const doc of batchDocs) {
@@ -96,13 +168,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                 
                                 if (uploadRes && uploadRes.url) {
                                     fileUrls.push(uploadRes.url);
+                                } else {
+                                    broadcastProgress('SYNC_ERROR', `Lỗi tải file ${f.fileName}: ${uploadRes ? uploadRes.error || JSON.stringify(uploadRes) : 'Không có phản hồi'}`);
                                 }
-                            } catch (err) {}
+                            } catch (err) {
+                                broadcastProgress('SYNC_ERROR', `Lỗi kết nối tải file ${f.fileName}: ${err.message}`);
+                            }
                         }
                     }
 
-                    const assigneeId = getStaffId(doc.coAssignee || doc.nguoiSoan);
-                    
+                    const assigneeId = await getStaffId(doc.nguoiSoan);
+
                     // Lưu văn bản vào Firebase
                     const newDoc = {
                         Doc_ID: doc.doc_id || '',
@@ -111,12 +187,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         Receive_Date: doc.ngayDen || '',
                         Summary: doc.trichYeu || '',
                         Issuer: doc.coQuanBanHanh || '',
-                        Assignee_ID: assigneeId,
-                        Deadline: '',
+                        Lead_Assignee: assigneeId,
+                        Deadline: doc.deadline || '',
                         Status: 'Đang xử lý',
                         Note: doc.loaiVanBan ? `Loại VB: ${doc.loaiVanBan}` : '',
-                        Co_Assignees: doc.coAssignee || '',
-                        File_URL: fileUrls.join('\\n'),
+                        Co_Assignee: doc.coAssignee || '',
+                        File_URL: fileUrls.join('\n'),
                         createdAt: new Date().toISOString()
                     };
 
@@ -134,7 +210,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                Source: 'Văn bản đến', Linked_Doc_ID: newDocId, Category: 'Văn bản chỉ đạo', Priority: doc.doKhan || 'Bình thường', Status: 'Đang xử lý', Assignee_ID: assigneeId, Role: 'Chủ trì', Deadline: '', createdAt: new Date().toISOString()
+                                Source: 'Văn bản đến', Linked_Doc_ID: newDocId, Category: 'Văn bản chỉ đạo', Priority: doc.doKhan || 'Bình thường', Status: 'Đang xử lý', Lead_Assignee: assigneeId, Role: 'Chủ trì', Deadline: doc.deadline || '', createdAt: new Date().toISOString()
                             })
                         });
                     }
@@ -143,13 +219,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     if (doc.coAssignee) {
                         const coAssigneesArr = doc.coAssignee.split(',').filter(x => x.trim() !== '');
                         for (const coName of coAssigneesArr) {
-                            const coId = getStaffId(coName.trim());
+                            const coId = await getStaffId(coName.trim());
                             if (coId && coId !== assigneeId) {
                                 await fetch(`${FIREBASE_URL}/tasks.json`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
-                                        Source: 'Văn bản đến', Linked_Doc_ID: newDocId, Category: 'Văn bản chỉ đạo', Priority: doc.doKhan || 'Bình thường', Status: 'Đang xử lý', Assignee_ID: coId, Role: 'Phối hợp', Deadline: '', createdAt: new Date().toISOString()
+                                        Source: 'Văn bản đến', Linked_Doc_ID: newDocId, Category: 'Văn bản chỉ đạo', Priority: doc.doKhan || 'Bình thường', Status: 'Đang xử lý', Lead_Assignee: coId, Role: 'Phối hợp', Deadline: doc.deadline || '', createdAt: new Date().toISOString()
                                     })
                                 });
                             }
@@ -231,7 +307,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                             if (typeof DataRemoting !== 'undefined') {
                                 DataRemoting.getDoc('qlvb.van_ban_den.getDcmTrackActivitiLog("' + doc_id + '","QLVB_DNI_UBXPHURIENG.","","","1","' + doc_id + '")', function(htmlData) {
                                     let coAssignees = [];
+                                    let deadline = '';
                                     if (htmlData) {
+                                        const txt = document.createElement("textarea");
+                                        txt.innerHTML = htmlData;
+                                        const decodedHtml = txt.value;
+                                        
+                                        // Tìm Đồng xử lý
                                         const match = htmlData.match(/&#272;&#7891;ng x&#7917; l&#253;: (.*?)<\/p>/);
                                         if (match && match[1]) {
                                             const namesHtml = match[1];
@@ -240,13 +322,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                             while ((m = spanRegex.exec(namesHtml)) !== null) {
                                                 let name = m[1].trim();
                                                 name = name.replace(/\s*\([^)]+\)\.?/g, '').trim();
-                                                const txt = document.createElement("textarea");
-                                                txt.innerHTML = name;
-                                                coAssignees.push(txt.value);
+                                                const txtName = document.createElement("textarea");
+                                                txtName.innerHTML = name;
+                                                coAssignees.push(txtName.value);
                                             }
                                         }
+
+                                        // Tìm Ngày hết hạn
+                                        const deadlineMatch = decodedHtml.match(/Ngày hết hạn\s*:\s*(?:<[^>]+>)*\s*([\d]{2}\/[\d]{2}\/[\d]{4})/i);
+                                        if (deadlineMatch && deadlineMatch[1]) {
+                                            deadline = deadlineMatch[1].trim();
+                                        }
                                     }
-                                    resolve(coAssignees);
+                                    resolve({ coAssignees, deadline });
                                 });
                             } else {
                                 resolve([]);

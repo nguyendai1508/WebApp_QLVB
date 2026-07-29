@@ -1,56 +1,49 @@
 const fs = require('fs');
 
+const harPath = 'C:\\Users\\NguyenDai\\Downloads\\dnis.dongnai.gov.vn.har';
 try {
-  const harData = JSON.parse(fs.readFileSync('qlvb-snnmt.dongnai.gov.vn.har', 'utf8'));
-  const entries = harData.log.entries;
-  
-  console.log("=== PHÂN TÍCH FILE HAR ===");
-  
-  // 1. Tìm Request POST đăng nhập (Thường chứa login, DangNhap, v.v)
-  const loginEntry = entries.find(e => 
-    e.request.method === 'POST' && 
-    (e.request.url.includes('DangNhap') || e.request.url.includes('login'))
-  );
-  
-  if (loginEntry) {
-    console.log("\n[1] URL ĐĂNG NHẬP: " + loginEntry.request.url);
-    if (loginEntry.request.postData && loginEntry.request.postData.params) {
-      console.log("\n[1.1] PARAMETERS GỬI LÊN (PAYLOAD):");
-      loginEntry.request.postData.params.forEach(p => {
-        // Rút gọn viewstate nếu quá dài
-        let val = p.value || '';
-        if (val.length > 50) val = val.substring(0, 50) + '...';
-        console.log(`- ${p.name}: ${val}`);
-      });
+    const data = fs.readFileSync(harPath, 'utf8');
+    const har = JSON.parse(data);
+    
+    console.log("Total requests:", har.log.entries.length);
+    
+    let foundDeadline = false;
+    let foundDwr = false;
+    
+    for (const entry of har.log.entries) {
+        const url = entry.request.url;
+        const responseText = entry.response.content && entry.response.content.text ? entry.response.content.text : '';
+        const reqPost = entry.request.postData && entry.request.postData.text ? entry.request.postData.text : '';
+        
+        // Look for DWR calls (DataRemoting)
+        if (url.includes('dwr') || url.includes('DataRemoting')) {
+            foundDwr = true;
+            console.log("\n[DWR CALL] " + url);
+            console.log("Request:", reqPost.substring(0, 200));
+            console.log("Response snippet:", responseText.substring(0, 300).replace(/\n/g, ' '));
+            
+            // Check if deadline is in the response
+            if (responseText.match(/30\/0?7\/2026/i) || responseText.match(/hạn xử lý/i) || responseText.match(/hết hạn/i)) {
+                console.log("🌟 => FOUND DEADLINE/KEYWORD IN THIS DWR RESPONSE!");
+                const m = responseText.match(/.{0,50}(30\/0?7\/2026|hạn xử lý).{0,50}/i);
+                if (m) console.log("   Snippet:", m[0].replace(/\n/g, ' '));
+                foundDeadline = true;
+            }
+        }
+        
+        // General check for the deadline in ANY request
+        if (responseText.match(/30\/0?7\/2026/i) || responseText.match(/hạn xử lý/i)) {
+            console.log("\n[MATCH IN] " + url);
+            const snippet = responseText.match(/.{0,80}(30\/0?7\/2026|hạn xử lý).{0,80}/i);
+            if (snippet) console.log("Snippet:", snippet[0].replace(/\n/g, ' '));
+            foundDeadline = true;
+        }
     }
-  } else {
-    console.log("\n[1] KHÔNG TÌM THẤY REQUEST POST ĐĂNG NHẬP!");
-  }
-  
-  // 2. Tìm Request GET Danh sách văn bản
-  const listEntry = entries.find(e => 
-    e.request.method === 'GET' && 
-    (e.request.url.includes('DanhSach') || e.request.url.includes('VanBanDen')) &&
-    e.response.content.mimeType.includes('text/html')
-  );
-  
-  if (listEntry) {
-    console.log("\n[2] URL DANH SÁCH: " + listEntry.request.url);
-    let html = listEntry.response.content.text;
-    if (html) {
-      // Decode base64 nếu cần
-      if (listEntry.response.content.encoding === 'base64') {
-        html = Buffer.from(html, 'base64').toString('utf8');
-      }
-      console.log(`\n[2.1] CHIỀU DÀI HTML NHẬN ĐƯỢC: ${html.length} chars`);
-      // Lưu html ra file để xem nội dung DOM
-      fs.writeFileSync('test_dom.html', html, 'utf8');
-      console.log("\n[2.2] Đã lưu HTML ra file test_dom.html để phân tích Regex.");
+    
+    if (!foundDeadline) {
+        console.log("\n❌ Could not find the exact deadline (30/7/2026) in any response.");
     }
-  } else {
-    console.log("\n[2] KHÔNG TÌM THẤY REQUEST HTML DANH SÁCH!");
-  }
-
-} catch (err) {
-  console.error("Lỗi đọc file HAR: ", err);
+    
+} catch(e) {
+    console.error("Error reading HAR file:", e.message);
 }

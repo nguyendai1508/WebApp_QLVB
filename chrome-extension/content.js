@@ -204,6 +204,7 @@ function scrapeCurrentPage() {
         let ngayDenText = tds[10]?.innerText.trim() || "";
         
         const coQuanBanHanh = tds[14]?.innerText.trim() || "";
+        const rowDeadline = tds[13]?.innerText.trim() || ""; // Hạn xử lý lấy ngay từ bảng chính!
         const xlc = tds[18]?.innerText.trim() || ""; // Xử lý chính
         const doKhan = tds[19]?.innerText.trim() || "";
         const loaiVanBan = tds[20]?.innerText.trim() || "";
@@ -228,7 +229,7 @@ function scrapeCurrentPage() {
         results.push({
             payload: {
                 soHieu, soDen, trichYeu, ngayDen, loaiVanBan, coQuanBanHanh,
-                nguoiSoan: xlc, doKhan, ngayVanBan, detailUrl
+                nguoiSoan: xlc, doKhan, ngayVanBan, detailUrl, rowDeadline
             },
             doc_id: doc_id
         });
@@ -342,9 +343,10 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                     addLog(`👥 Đã tìm thấy ${coAssignees.length} Đồng xử lý.`, "success");
                 }
                 
-                let finalDeadline = deadline;
+                // Nếu Log không có Hạn xử lý, dùng Hạn xử lý trên bảng chính
+                let finalDeadline = items[i].payload.rowDeadline || deadline;
                 
-                // Nếu Log không có Hạn xử lý, thử tải trang chi tiết để tìm
+                // Nếu vẫn không có, thử tải trang chi tiết để tìm
                 if (!finalDeadline && items[i].payload.detailUrl) {
                     if (items[i].payload.detailUrl.includes('javascript:')) {
                         addLog(`⚠️ Không thể lấy Hạn xử lý vì link là Javascript PostBack.`, "warning");
@@ -356,8 +358,8 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                             const docHtml = parser.parseFromString(detailHtml, "text/html");
                             
                             // Regex tìm Ngày hết hạn hoặc Hạn xử lý trong toàn bộ text của trang
-                            const plainText = docHtml.body.innerText;
-                            const dlMatch = plainText.match(/(?:Ngày hết hạn|Hạn xử lý)[\s\S]{0,100}?(\d{1,2}\/\d{1,2}\/\d{4})/i);
+                            const plainText = docHtml.body.textContent || "";
+                            const dlMatch = plainText.match(/(?:Ngày hết hạn|Hạn xử lý|Hạn giải quyết)[\s\S]{0,150}?(\d{1,2}\/\d{1,2}\/\d{4})/i);
                             
                             if (dlMatch && dlMatch[1]) {
                                 finalDeadline = dlMatch[1].trim();

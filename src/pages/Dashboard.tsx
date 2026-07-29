@@ -100,8 +100,11 @@ export function Dashboard() {
     
     return staff.map((s: any) => {
       const name = s.Full_Name || s.fullName || s['Họ tên cán bộ'] || 'Cán bộ';
-      const leadTasks = tasks.filter((t: any) => t.Lead_Assignee === name);
+      const leadTasks = tasks.filter((t: any) => t.Role ? (t.Lead_Assignee === name && t.Role === 'Chủ trì') : (t.Lead_Assignee === name));
       const coopTasks = tasks.filter((t: any) => {
+        if (t.Role) {
+          return t.Lead_Assignee === name && t.Role === 'Phối hợp';
+        }
         const coAssignees = (t.Co_Assignee || '').split(',').map((str: string) => str.trim());
         return coAssignees.includes(name);
       });

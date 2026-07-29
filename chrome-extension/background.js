@@ -102,19 +102,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                 return existingStaff.id;
                             }
                         }
+                    } else {
+                        // Theo yêu cầu: KHÔNG dò bằng chuẩn mã Unicode của Họ tên nữa vì không chuẩn.
+                        // Nếu không lấy được Username thì báo lỗi thẳng ra màn hình.
+                        throw new Error(`KHÔNG THỂ LẤY USERNAME TỪ: "${nameRaw}". Vui lòng kiểm tra lại trên VNPT!`);
                     }
                     
-                    // Nếu không có username (hoặc chưa tìm thấy), mới fallback sang dò tên
-                    const cleanNameLower = cleanName.normalize('NFC').toLowerCase();
-                    const staff = staffList.find(s => (s.Full_Name || s.fullName)?.normalize('NFC').toLowerCase() === cleanNameLower);
-                    
-                    if (staff) {
-                        return staff.id;
-                    }
-                    
-                    // Nếu chưa có -> Tự động tạo Cán bộ và Người dùng
+                    // Nếu chưa có (Nhưng ĐÃ lấy được Username) -> Tự động tạo Cán bộ và Người dùng
                     const newStaffId = `AUTO-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-                    const username = explicitUsername || generateUsername(cleanName);
+                    const username = explicitUsername;
                     
                     const newStaff = {
                         Full_Name: cleanName,
@@ -278,12 +274,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 // Dữ liệu đã lưu Firebase. Web App sẽ tự động cập nhật qua Realtime Database Listener!
                 // Không gửi SYNC_COMPLETE ở đây nữa vì sẽ làm tắt thanh progress quá sớm (khi mới xong batch 1).
                 
+                sendResponse({ success: true, message: 'Đã xử lý lưu vào Firebase' });
+                
             } catch (err) {
                 console.error("Lỗi khi lưu Firebase trực tiếp từ Extension:", err);
+                sendResponse({ success: false, error: err.toString() });
             }
         })();
         
-        sendResponse({ success: true, message: 'Đã xử lý lưu vào Firebase' });
         return true;
     }
     if (request.action === 'EVAL_IN_MAIN_WORLD') {
@@ -351,18 +349,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                         txt.innerHTML = htmlData;
                                         const decodedHtml = txt.value;
                                         
-                                        // Tìm Đồng xử lý hoặc Đồng gửi
+                                        // Tìm Người Xử Lý Chính (Chuyển tới) để lấy username
+                                        const leadMatch = decodedHtml.match(/Chuyển tới\s*:\s*(.*?)<\/p>/i);
+                                        let leadAssigneeLog = "";
+                                        if (leadMatch && leadMatch[1]) {
+                                            let cleanLead = leadMatch[1].replace(/<[^>]+>/g, '').trim();
+                                            cleanLead = cleanLead.replace(/\.$/, '');
+                                            leadAssigneeLog = cleanLead;
+                                        }
+
+                                        // Tìm Đồng xử lý hoặc Đồng gửi (bóc toàn bộ text để giữ lại Username trong ngoặc)
                                         const coAssigneeMatch = decodedHtml.match(/(?:Đồng xử lý|Đồng gửi)\s*:\s*(.*?)<\/p>/i);
                                         if (coAssigneeMatch && coAssigneeMatch[1]) {
                                             const namesHtml = coAssigneeMatch[1];
-                                            const spanRegex = /<span class="c-blue">([^<]+)<\/span>/g;
-                                            let m;
-                                            while ((m = spanRegex.exec(namesHtml)) !== null) {
-                                                let name = m[1].trim();
-                                                const txtName = document.createElement("textarea");
-                                                txtName.innerHTML = name;
-                                                coAssignees.push(txtName.value);
-                                            }
+                                            let cleanNames = namesHtml.replace(/<[^>]+>/g, '').trim();
+                                            cleanNames = cleanNames.replace(/\.$/, ''); // Xóa dấu chấm cuối câu
+                                            const arr = cleanNames.split(',').map(s => s.trim()).filter(s => s !== '');
+                                            coAssignees = arr;
                                         }
 
                                         // Tìm Ngày hết hạn bằng cách xóa sạch thẻ HTML trước
@@ -372,13 +375,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                             deadline = deadlineMatch[1].trim();
                                         }
                                     }
-                                    resolve({ coAssignees, deadline });
+                                    resolve({ coAssignees, deadline, leadAssigneeLog });
                                 });
                             } else {
-                                resolve([]);
+                                resolve({ coAssignees: [], deadline: '', leadAssigneeLog: '' });
                             }
                         } catch(e) {
-                            resolve([]);
+                            resolve({ coAssignees: [], deadline: '', leadAssigneeLog: '' });
                         }
                     });
                 },

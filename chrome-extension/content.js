@@ -318,7 +318,7 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                 }
                 
                 // Lấy Đồng xử lý và Hạn xử lý
-                const { coAssignees, deadline } = await getCoAssigneesForDoc(items[i].doc_id);
+                const { coAssignees, deadline, leadAssigneeLog } = await getCoAssigneesForDoc(items[i].doc_id);
                 if (coAssignees && coAssignees.length > 0) {
                     docsPayload[i].coAssignee = coAssignees.join(', ');
                     addLog(`👥 Đã tìm thấy ${coAssignees.length} Đồng xử lý.`, "success");
@@ -326,6 +326,15 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                 if (deadline) {
                     docsPayload[i].deadline = deadline;
                     addLog(`⏳ Tìm thấy Hạn xử lý: ${deadline}`, "success");
+                }
+                
+                // Cập nhật lại Username cho Người Xử Lý Chính nếu tìm thấy trong Log
+                if (leadAssigneeLog && docsPayload[i].nguoiSoan) {
+                    const firstPersonName = docsPayload[i].nguoiSoan.split(',')[0].trim().toLowerCase();
+                    if (leadAssigneeLog.toLowerCase().includes(firstPersonName)) {
+                        docsPayload[i].nguoiSoan = leadAssigneeLog;
+                        addLog(`👤 Bổ sung Username cho Xử lý chính: ${leadAssigneeLog}`, "success");
+                    }
                 }
             }
         }
@@ -411,10 +420,15 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                         successCount += batchDocs.length;
                         addLog(`✅ Nhóm ${i + 1} đến ${i + batchDocs.length} xử lý xong (Đã chuyển Web App)!`, "success");
                     } else {
-                        addLog(`❌ Gửi Web App thất bại`, "error");
+                        const errMsg = apiResponse ? apiResponse.error : 'Không xác định';
+                        addLog(`❌ Nhóm ${i + 1} thất bại: ${errMsg}`, "error");
+                        window._qlvbStopRequested = true;
+                        throw new Error(`Lỗi từ Background: ${errMsg}`);
                     }
                 } catch (netErr) {
-                    addLog(`❌ Lỗi mạng khi gửi nhóm ${i + 1}: ${netErr.message}`, "error");
+                    addLog(`❌ Tiến trình bị gián đoạn: ${netErr.message}`, "error");
+                    window._qlvbStopRequested = true;
+                    throw netErr;
                 }
                 
                 docsSent += batchDocs.length;

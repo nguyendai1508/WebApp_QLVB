@@ -179,8 +179,7 @@ export function TaskForm({ initialData, autoFillFromDoc, isReadOnly, onSubmit, o
 
     // Validation
     if (!currentData.Content?.trim()) {
-      alert('Vui lòng nhập Nội dung công việc phải làm!');
-      return;
+      currentData.Content = currentData.Summary || currentData.Linked_Doc_ID || 'Xử lý công việc';
     }
     if (!currentData.Lead_Assignee) {
       alert('Vui lòng chọn Cán bộ chủ trì!');

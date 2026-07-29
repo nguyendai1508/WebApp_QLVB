@@ -3,6 +3,7 @@ import { Eye, Edit, Trash2, CheckCircle, Search, PlusCircle, ClipboardList, Cale
 import { useAppStore } from '@/store/useAppStore';
 import { Modal } from '@/components/Modal';
 import { TaskForm } from '@/components/TaskForm';
+import { QuickTaskDrawer } from '@/components/QuickTaskDrawer';
 import { usePermissions } from '@/hooks/usePermissions';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { XCircle, FileCheck2, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -120,6 +121,7 @@ export function Tasks() {
   const [deadlineFilter, setDeadlineFilter] = useState('Tất cả');
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
+  const [drawerTask, setDrawerTask] = useState<any>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'LEAD' | 'COOP'>('ALL');
   const [expandedDocIds, setExpandedDocIds] = useState<Record<string, boolean>>({});
@@ -149,6 +151,101 @@ export function Tasks() {
     type: 'warning',
     onConfirm: () => {}
   });
+
+  const handleOpenDrawer = (task: any) => {
+    setDrawerTask(task);
+  };
+
+  const handleDrawerUpdateStatus = async (task: any, newStatus: string, extraPayload?: any) => {
+    try {
+      setIsLoading(true);
+      const { api } = await import('@/services/api');
+      const targetId = task.id || task.Task_ID;
+      const todayISO = new Date().toISOString().split('T')[0];
+      
+      const payload = {
+        source: task.Source,
+        relatedDoc: task.Linked_Doc_ID,
+        category: task.Category,
+        content: task.Content,
+        priority: task.Priority,
+        assigner: task.Assigner,
+        leadDepartment: task.Lead_Department,
+        leadAssignee: task.Lead_Assignee,
+        coAssignee: task.Co_Assignee,
+        assignDate: task.Assign_Date,
+        deadline: task.Deadline,
+        actualCompleteDate: newStatus === 'Hoàn thành' ? todayISO : task.Actual_Complete_Date,
+        progressPercentage: newStatus === 'Hoàn thành' ? 100 : (extraPayload?.progressPercentage ?? task.Progress_Percentage),
+        status: newStatus,
+        resultOutput: task.Result_Output,
+        relatedOutgoingDoc: task.Related_Outgoing_Doc,
+        notes: task.Notes,
+        extensionDate: extraPayload?.Extension_Date !== undefined ? extraPayload.Extension_Date : task.Extension_Date,
+        extensionReason: extraPayload?.Extension_Reason !== undefined ? extraPayload.Extension_Reason : task.Extension_Reason,
+        auditLog: `[${new Date().toLocaleString('en-GB')}] ${user?.FullName || 'Cán bộ'} đã [CẬP NHẬT TRẠNG THÁI ${newStatus}].\n${task.Audit_Trail || ''}`,
+        createdBy: task.Created_By
+      };
+
+      const res = await api.updateTask(targetId, payload);
+      if (res.success) {
+        setDrawerTask(null);
+        await initialize();
+      } else {
+        alert('Lỗi: ' + res.message);
+      }
+    } catch (e) {
+      alert('Có lỗi xảy ra!');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDrawerAddComment = async (task: any, commentText: string) => {
+    try {
+      setIsLoading(true);
+      const { api } = await import('@/services/api');
+      const targetId = task.id || task.Task_ID;
+      const timeStr = new Date().toLocaleString('en-GB');
+      const newComment = `[${timeStr}] 💬 ${user?.FullName || 'Người dùng'} đã thảo luận:\n${commentText.trim()}`;
+      const currentLog = task.Audit_Trail || task.auditLog || '';
+      const updatedLog = newComment + (currentLog ? '\n\n' + currentLog : '');
+
+      const payload = {
+        source: task.Source,
+        relatedDoc: task.Linked_Doc_ID,
+        category: task.Category,
+        content: task.Content,
+        priority: task.Priority,
+        assigner: task.Assigner,
+        leadDepartment: task.Lead_Department,
+        leadAssignee: task.Lead_Assignee,
+        coAssignee: task.Co_Assignee,
+        assignDate: task.Assign_Date,
+        deadline: task.Deadline,
+        actualCompleteDate: task.Actual_Complete_Date,
+        progressPercentage: task.Progress_Percentage,
+        status: task.Status,
+        resultOutput: task.Result_Output,
+        relatedOutgoingDoc: task.Related_Outgoing_Doc,
+        notes: task.Notes,
+        extensionDate: task.Extension_Date,
+        extensionReason: task.Extension_Reason,
+        auditLog: updatedLog,
+        createdBy: task.Created_By
+      };
+
+      const res = await api.updateTask(targetId, payload);
+      if (res.success) {
+        setDrawerTask((prev: any) => prev ? { ...prev, Audit_Trail: updatedLog, auditLog: updatedLog } : null);
+        await initialize();
+      }
+    } catch (e) {
+      alert('Có lỗi xảy ra!');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleEdit = (task: any) => {
     setEditingTask(task);
@@ -928,7 +1025,7 @@ export function Tasks() {
                              <div className="flex flex-col gap-1 items-center justify-center">
                                {renderFileBadges(task.Result_File_URL || task.Result_File, 'Báo cáo', 'emerald')}
                                <div className="flex items-center justify-center gap-1.5">
-                                 <button onClick={() => handleEdit(task)} className="p-1 text-gray-400 hover:text-primary transition-colors" title="Xem"><Eye className="w-3.5 h-3.5" /></button>
+                                 <button onClick={() => handleOpenDrawer(task)} className="p-1 text-blue-600 hover:text-blue-800 transition-colors" title="Xem nhanh (1-Click)"><Eye className="w-3.5 h-3.5" /></button>
                                  {permissions.canEditDoc && <button onClick={() => handleEdit(task)} className="p-1 text-gray-400 hover:text-amber-600 transition-colors" title="Sửa"><Edit className="w-3.5 h-3.5" /></button>}
                                  {permissions.canDelete && <button onClick={() => handleDelete(task.id || task.Task_ID)} className="p-1 text-gray-400 hover:text-rose-600 transition-colors" title="Xóa"><Trash2 className="w-3.5 h-3.5" /></button>}
                                </div>

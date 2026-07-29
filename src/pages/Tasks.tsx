@@ -322,12 +322,12 @@ export function Tasks() {
     let matchView = true;
     const isSpecialUser = permissions.isAdmin || permissions.isLanhDao || permissions.isVanThu;
     if (viewMode === 'MY_TASKS' || (!isSpecialUser)) {
-      matchView = task.Lead_Assignee?.includes(user?.FullName || '') || 
-                  task.Co_Assignee?.includes(user?.FullName || '');
+      const uName = user?.FullName || user?.['Họ tên cán bộ'] || user?.fullName || user?.Full_Name || user?.username || '';
+      matchView = task.Lead_Assignee?.includes(uName) || task.Co_Assignee?.includes(uName);
     } else if (viewMode === 'ASSIGNED_BY_ME') {
       const createdByStr = task.Created_By || '';
       const assignerStr = task.Assigner || '';
-      const myName = user?.FullName || '';
+      const myName = user?.FullName || user?.['Họ tên cán bộ'] || user?.fullName || user?.Full_Name || user?.username || '';
       matchView = createdByStr.toLowerCase().includes(myName.toLowerCase()) || 
                   assignerStr.toLowerCase().includes(myName.toLowerCase());
     }

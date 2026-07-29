@@ -72,7 +72,7 @@ const getCompletionStatus = (actual: string, deadline: string) => {
 }
 
 export function Tasks() {
-  const { tasks, incomingDocs, catalogs, staff, initialize, setIsLoading, user } = useAppStore();
+  const { tasks, catalogs, staff, initialize, setIsLoading, user } = useAppStore();
   const permissions = usePermissions();
   const getCatalogOptions = (type: string) => catalogs.filter(c => c.Type === type).map(c => c.Value);
   
@@ -422,37 +422,7 @@ export function Tasks() {
     return sortableTasks;
   }, [filteredTasks, sortConfig]);
 
-  
-  const groupedDocs = useMemo(() => {
-    if (viewMode !== 'ALL') return [];
-    
-    const docGroups: { [key: string]: any } = {};
-    
-    sortedTasks.forEach((t: any) => {
-      const docId = t.Linked_Doc_ID || 'Khác';
-      if (!docGroups[docId]) {
-         const incomingDoc = incomingDocs.find((d: any) => d.Doc_ID === docId || d.id === docId);
-         docGroups[docId] = {
-           docId,
-           tasks: [],
-           signNumber: incomingDoc?.Sign_Number || '',
-           summary: incomingDoc?.Summary || t.Content || '',
-         };
-      }
-      docGroups[docId].tasks.push(t);
-    });
-    
-    return Object.values(docGroups);
-  }, [sortedTasks, incomingDocs, viewMode]);
-
-  const paginatedDocs = viewMode === 'ALL'
-    ? groupedDocs.slice(0, displayLimit)
-    : [];
-
-  const paginatedTasks = viewMode !== 'ALL'
-    ? sortedTasks.slice(0, displayLimit)
-    : [];
-
+  const paginatedTasks = sortedTasks.slice(0, displayLimit);
 
   const requestSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -622,189 +592,245 @@ export function Tasks() {
           </div>
         </div>
         <div className="overflow-x-auto">
-
-          {viewMode === 'ALL' ? (
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-gray-500 border-b bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 font-medium w-10 text-center">STT</th>
-                  <th className="px-4 py-3 font-medium min-w-[300px]">Cán bộ xử lý</th>
-                  <th className="px-4 py-3 font-medium text-center">Ưu tiên</th>
-                  <th className="px-4 py-3 font-medium">Lĩnh vực</th>
-                  <th className="px-4 py-3 font-medium">Người giao</th>
-                  <th className="px-4 py-3 font-medium text-center">Ngày HT/Xin duyệt</th>
-                  <th className="px-4 py-3 font-medium text-center">% HT</th>
-                  <th className="px-4 py-3 font-medium text-center">Trạng thái</th>
-                  <th className="px-4 py-3 font-medium text-center">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y border-b border-gray-200">
-                {paginatedDocs.map((doc: any, dIdx: number) => (
-                  <React.Fragment key={dIdx}>
-                    <tr className="bg-blue-50/50 border-t-2 border-blue-100">
-                      <td className="px-4 py-3 font-bold text-center text-blue-800">{dIdx + 1}</td>
-                      <td colSpan={8} className="px-4 py-3">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-blue-900 text-sm">{doc.signNumber ? `Văn bản số: ${doc.signNumber}` : 'Nhóm công việc khác'}</span>
-                          <span className="text-blue-700 text-xs italic line-clamp-1">{doc.summary || 'Không có trích yếu'}</span>
-                        </div>
-                      </td>
-                    </tr>
-                    {doc.tasks.map((task: any, idx: number) => (
-                      <tr key={idx} className="hover:bg-gray-50 bg-white">
-                        <td className="px-4 py-3 text-center"></td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            {task.Role === 'Chủ trì' ? (
-                              <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded text-[10px] font-bold whitespace-nowrap">CHỦ TRÌ</span>
-                            ) : (
-                              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-bold whitespace-nowrap">PHỐI HỢP</span>
-                            )}
-                            <span className="font-medium text-gray-900">{task.Lead_Assignee}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {task.Priority && task.Priority !== 'Bình thường' ? (
-                            <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase whitespace-nowrap ${
-                              task.Priority.includes('Hỏa') ? 'bg-red-100 text-red-700' :
-                              task.Priority.includes('khẩn') ? 'bg-orange-100 text-orange-700' :
-                              'bg-amber-100 text-amber-700'
-                            }`}>
-                              {task.Priority}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 text-[10px]">Bình thường</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-gray-600 text-xs">{task.Category}</td>
-                        <td className="px-4 py-3 text-gray-600 text-xs">{task.Assigner || 'Hệ thống'}</td>
-                        <td className="px-4 py-3 text-center text-xs">
-                          {task.Actual_Complete_Date || '-'}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <div className="w-16 mx-auto bg-gray-200 rounded-full h-2 mt-1">
-                            <div 
-                              className={`h-2 rounded-full ${Number(task.Progress_Percentage) === 100 ? 'bg-emerald-500' : 'bg-blue-500'}`} 
-                              style={{ width: `${task.Progress_Percentage || 0}%` }}
-                            ></div>
-                          </div>
-                          <div className="text-[10px] text-gray-500 font-medium mt-1">{task.Progress_Percentage || 0}%</div>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {task.Status === 'Sắp hạn' ? (
-                            <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-[10px] font-bold uppercase">SẮP HẠN</span>
-                          ) : task.Status === 'Quá hạn' ? (
-                            <span className="px-2 py-1 bg-rose-100 text-rose-700 rounded-lg text-[10px] font-bold uppercase">QUÁ HẠN</span>
-                          ) : task.Status === 'Hoàn thành' ? (
-                            <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-bold uppercase">ĐÃ XONG</span>
-                          ) : (
-                            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-[10px] font-bold uppercase">{task.Status || 'Đang xử lý'}</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                           <div className="flex items-center justify-center gap-2">
-                             <button onClick={() => handleEdit(task)} className="p-1 text-gray-400 hover:text-primary transition-colors"><Eye className="w-4 h-4" /></button>
-                             {permissions.canEditDoc && <button onClick={() => handleEdit(task)} className="p-1 text-gray-400 hover:text-amber-600 transition-colors"><Edit className="w-4 h-4" /></button>}
-                             {permissions.canDelete && <button onClick={() => handleDelete(task.Task_ID)} className="p-1 text-gray-400 hover:text-rose-600 transition-colors"><Trash2 className="w-4 h-4" /></button>}
-                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </React.Fragment>
-                ))}
-                {paginatedDocs.length === 0 && <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-500">Không có công việc nào.</td></tr>}
-              </tbody>
-            </table>
-          ) : (
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-gray-500 border-b bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 font-medium w-10 text-center">
-                    <input type="checkbox" className="rounded border-gray-300 text-primary w-4 h-4" onChange={(e) => handleSelectAll(e, paginatedTasks)} checked={paginatedTasks.length > 0 && selectedIds.length === paginatedTasks.length} />
-                  </th>
-                  <th className="px-4 py-3 font-medium cursor-pointer" onClick={() => requestSort('Priority')}>Ưu tiên</th>
-                  <th className="px-4 py-3 font-medium min-w-[250px]" onClick={() => requestSort('Linked_Doc_ID')}>Văn bản liên quan / Nội dung chỉ đạo</th>
-                  <th className="px-4 py-3 font-medium cursor-pointer" onClick={() => requestSort('Lead_Assignee')}>Vai trò</th>
-                  <th className="px-4 py-3 font-medium cursor-pointer" onClick={() => requestSort('Assigner')}>Người giao</th>
-                  <th className="px-4 py-3 font-medium cursor-pointer text-center" onClick={() => requestSort('Deadline')}>Hạn xử lý</th>
-                  <th className="px-4 py-3 font-medium cursor-pointer text-center" onClick={() => requestSort('Progress_Percentage')}>% HT</th>
-                  <th className="px-4 py-3 font-medium cursor-pointer text-center" onClick={() => requestSort('Status')}>Trạng thái</th>
-                  <th className="px-4 py-3 font-medium text-center">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y border-b border-gray-200">
-                {paginatedTasks.map((task: any, idx: number) => {
-                   const incomingDoc = incomingDocs.find((d: any) => d.Doc_ID === task.Linked_Doc_ID || d.id === task.Linked_Doc_ID);
-                   const signNumber = incomingDoc?.Sign_Number || '';
-                   const summary = incomingDoc?.Summary || task.Content || '';
-                   
-                   return (
-                  <tr key={idx} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-center">
-                      <input type="checkbox" className="rounded border-gray-300 text-primary w-4 h-4" checked={selectedIds.includes(task.id || task.Task_ID)} onChange={() => handleSelectRow(task.id || task.Task_ID)} />
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {task.Priority && task.Priority !== 'Bình thường' ? (
-                        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase whitespace-nowrap ${
-                          task.Priority.includes('Hỏa') ? 'bg-red-100 text-red-700' :
-                          task.Priority.includes('khẩn') ? 'bg-orange-100 text-orange-700' :
-                          'bg-amber-100 text-amber-700'
-                        }`}>
-                          {task.Priority}
+          <table className="w-full text-sm text-left">
+            <thead className="text-xs text-gray-500 border-b bg-white">
+              <tr>
+                <th className="px-2 py-3 font-medium w-10 text-center">
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-gray-300 text-primary focus:ring-primary cursor-pointer w-4 h-4"
+                    checked={paginatedTasks.length > 0 && selectedIds.length === paginatedTasks.length}
+                    onChange={(e) => handleSelectAll(e, paginatedTasks)}
+                  />
+                </th>
+                <th className="px-2 py-3 font-medium cursor-pointer hover:bg-gray-50" onClick={() => requestSort('Task_ID')}>
+                  <div className="flex items-center gap-1">Mã việc <ArrowUpDown className={`w-3 h-3 ${sortConfig?.key === 'Task_ID' ? 'text-primary' : 'text-gray-400'}`} /></div>
+                </th>
+                <th className="px-2 py-3 font-medium cursor-pointer hover:bg-gray-50" onClick={() => requestSort('Priority')}>
+                  <div className="flex items-center gap-1 text-center justify-center">Ưu Tiên <ArrowUpDown className={`w-3 h-3 ${sortConfig?.key === 'Priority' ? 'text-primary' : 'text-gray-400'}`} /></div>
+                </th>
+                <th className="px-2 py-3 font-medium cursor-pointer hover:bg-gray-50" onClick={() => requestSort('Content')}>
+                  <div className="flex items-center gap-1">Nội dung chỉ đạo <ArrowUpDown className={`w-3 h-3 ${sortConfig?.key === 'Content' ? 'text-primary' : 'text-gray-400'}`} /></div>
+                </th>
+                <th className="px-2 py-3 font-medium cursor-pointer hover:bg-gray-50" onClick={() => requestSort('Category')}>
+                  <div className="flex items-center gap-1">Lĩnh vực <ArrowUpDown className={`w-3 h-3 ${sortConfig?.key === 'Category' ? 'text-primary' : 'text-gray-400'}`} /></div>
+                </th>
+                <th className="px-2 py-3 font-medium cursor-pointer hover:bg-gray-50" onClick={() => requestSort('Source')}>
+                  <div className="flex items-center gap-1">Nguồn việc <ArrowUpDown className={`w-3 h-3 ${sortConfig?.key === 'Source' ? 'text-primary' : 'text-gray-400'}`} /></div>
+                </th>
+                <th className="px-2 py-3 font-medium cursor-pointer hover:bg-gray-50" onClick={() => requestSort('Assigner')}>
+                  <div className="flex items-center gap-1 whitespace-nowrap">Người giao việc <ArrowUpDown className={`w-3 h-3 ${sortConfig?.key === 'Assigner' ? 'text-primary' : 'text-gray-400'}`} /></div>
+                </th>
+                <th className="px-2 py-3 font-medium cursor-pointer hover:bg-gray-50" onClick={() => requestSort('Assign_Date')}>
+                  <div className="flex items-center gap-1 whitespace-nowrap">Ngày giao <ArrowUpDown className={`w-3 h-3 ${sortConfig?.key === 'Assign_Date' ? 'text-primary' : 'text-gray-400'}`} /></div>
+                </th>
+                <th className="px-2 py-3 font-medium cursor-pointer hover:bg-gray-50" onClick={() => requestSort('Lead_Assignee')}>
+                  <div className="flex items-center gap-1 whitespace-nowrap">Cán bộ chủ trì <ArrowUpDown className={`w-3 h-3 ${sortConfig?.key === 'Lead_Assignee' ? 'text-primary' : 'text-gray-400'}`} /></div>
+                </th>
+                <th className="px-2 py-3 font-medium cursor-pointer hover:bg-gray-50" onClick={() => requestSort('Deadline')}>
+                  <div className="flex items-center gap-1 whitespace-nowrap">Hạn hoàn thành <ArrowUpDown className={`w-3 h-3 ${sortConfig?.key === 'Deadline' ? 'text-primary' : 'text-gray-400'}`} /></div>
+                </th>
+                <th className="px-2 py-3 font-medium cursor-pointer hover:bg-gray-50" onClick={() => requestSort('Actual_Complete_Date')}>
+                  <div className="flex items-center justify-center gap-1 leading-tight">Ngày HT/<br/>Xin duyệt <ArrowUpDown className={`w-3 h-3 ${sortConfig?.key === 'Actual_Complete_Date' ? 'text-primary' : 'text-gray-400'}`} /></div>
+                </th>
+                <th className="px-2 py-3 font-medium cursor-pointer hover:bg-gray-50" onClick={() => requestSort('Progress_Percentage')}>
+                  <div className="flex items-center gap-1 whitespace-nowrap">% HT <ArrowUpDown className={`w-3 h-3 ${sortConfig?.key === 'Progress_Percentage' ? 'text-primary' : 'text-gray-400'}`} /></div>
+                </th>
+                <th className="px-2 py-3 font-medium text-center cursor-pointer hover:bg-gray-50" onClick={() => requestSort('Status')}>
+                  <div className="flex items-center justify-center gap-1 whitespace-nowrap">Trạng thái <ArrowUpDown className={`w-3 h-3 ${sortConfig?.key === 'Status' ? 'text-primary' : 'text-gray-400'}`} /></div>
+                </th>
+                <th className="px-2 py-3 font-medium text-center whitespace-nowrap">Cảnh báo</th>
+                <th className="px-2 py-3 font-medium text-center whitespace-nowrap">File</th>
+                <th className="px-2 py-3 font-medium text-center whitespace-nowrap">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {paginatedTasks.map((task, idx) => (
+                <tr key={idx} className="hover:bg-gray-50">
+                  <td className="px-2 py-3 text-center">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-gray-300 text-primary focus:ring-primary cursor-pointer w-4 h-4"
+                      checked={selectedIds.includes(task.id || task.Task_ID)}
+                      onChange={() => handleSelectRow(task.id || task.Task_ID)}
+                    />
+                  </td>
+                  <td className="px-2 py-3 text-gray-500 whitespace-nowrap">{task.Task_ID}</td>
+                  <td className="px-2 py-3 text-center">
+                    {task.Priority && task.Priority !== 'Bình thường' ? (
+                      <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase whitespace-nowrap ${
+                        task.Priority.includes('Hỏa') ? 'bg-red-100 text-red-700' :
+                        task.Priority.includes('khẩn') ? 'bg-orange-100 text-orange-700' :
+                        'bg-amber-100 text-amber-700'
+                      }`}>
+                        {task.Priority}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-xs">Bình thường</span>
+                    )}
+                  </td>
+                  <td className="px-2 py-3">
+                    <div className="text-gray-900 max-w-[200px] line-clamp-2" title={task.Content}>{task.Content}</div>
+                  </td>
+                  <td className="px-2 py-3">
+                    <div className="text-gray-600 max-w-[150px] line-clamp-2" title={task.Category}>{task.Category}</div>
+                  </td>
+                  <td className="px-2 py-3 text-gray-600">
+                    <div className="line-clamp-2">{task.Source}</div>
+                  </td>
+                  <td className="px-2 py-3">
+                    <span className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium whitespace-nowrap">
+                      {task.Assigner || 'Hệ thống'}
+                    </span>
+                  </td>
+                  <td className="px-2 py-3 text-gray-600 text-xs whitespace-nowrap">
+                    {task.Assign_Date}
+                  </td>
+                  <td className="px-2 py-3">
+                    <div className="bg-[#e6f4ea] text-primary rounded-lg text-xs font-bold px-2 py-1 max-w-[150px] line-clamp-2" title={task.Lead_Assignee}>
+                      {task.Lead_Assignee || 'Chưa phân công'}
+                    </div>
+                  </td>
+                  <td className="px-2 py-3 text-gray-600 whitespace-nowrap">{task.Deadline}</td>
+                  <td className="px-2 py-3 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                      <span className={`text-[11px] font-bold whitespace-nowrap ${
+                        task.Status === 'Chờ duyệt' ? 'text-amber-600' :
+                        task.Status === 'Hoàn thành' ? 'text-emerald-600' : 'text-gray-400'
+                      }`}>{task.Actual_Complete_Date || '-'}</span>
+                      {getCompletionStatus(task.Actual_Complete_Date, task.Deadline)}
+                    </div>
+                  </td>
+                  <td className="px-2 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden flex-shrink-0">
+                        <div className="h-full bg-teal-600" style={{ width: `${task.Progress_Percentage || 0}%` }}></div>
+                      </div>
+                      <span className="text-xs font-medium text-gray-600">{task.Progress_Percentage || 0}%</span>
+                    </div>
+                  </td>
+                  <td className="px-2 py-3 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                        task.Status === 'Hoàn thành' ? 'bg-[#e6f4ea] text-primary' : 
+                        task.Status === 'Quá hạn' ? 'bg-rose-50 text-rose-600' : 
+                        task.Status === 'Xin gia hạn' ? 'bg-purple-100 text-purple-700 font-bold uppercase' :
+                        task.Status === 'Chờ duyệt' ? 'bg-amber-100 text-amber-700 font-bold' :
+                        task.Status === 'Đã phân công' ? 'bg-indigo-50 text-indigo-600' :
+                        'bg-blue-50 text-blue-600'
+                      }`}>
+                        {task.Status}
+                      </span>
+                      {task.Status === 'Chờ duyệt' && task.Actual_Complete_Date && (
+                        <span className="text-[10px] text-amber-600 mt-1 font-bold whitespace-nowrap">
+                          {calculatePendingDays(task.Actual_Complete_Date) === 0 ? 'Mới trình' : `Đã trình ${calculatePendingDays(task.Actual_Complete_Date)} ngày`}
                         </span>
-                      ) : <span className="text-gray-400 text-[10px]">Bình thường</span>}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-gray-900 text-xs mb-1">{signNumber ? `Số ${signNumber}` : 'Việc chung'}</span>
-                        <span className="text-gray-600 text-xs line-clamp-2" title={summary}>{summary}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      {task.Role === 'Chủ trì' ? (
-                        <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-[10px] font-bold whitespace-nowrap">CHỦ TRÌ</span>
-                      ) : (
-                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-[10px] font-bold whitespace-nowrap">PHỐI HỢP</span>
                       )}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600 text-xs">{task.Assigner || 'Hệ thống'}</td>
-                    <td className="px-4 py-3 text-center text-xs font-medium text-gray-900">
-                      {task.Deadline || 'Không hạn'}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="w-16 mx-auto bg-gray-200 rounded-full h-2 mt-1">
-                        <div className={`h-2 rounded-full ${Number(task.Progress_Percentage) === 100 ? 'bg-emerald-500' : 'bg-blue-500'}`} style={{ width: `${task.Progress_Percentage || 0}%` }}></div>
-                      </div>
-                      <div className="text-[10px] text-gray-500 font-medium mt-1">{task.Progress_Percentage || 0}%</div>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {task.Status === 'Sắp hạn' ? (
-                        <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-[10px] font-bold uppercase">SẮP HẠN</span>
-                      ) : task.Status === 'Quá hạn' ? (
-                        <span className="px-2 py-1 bg-rose-100 text-rose-700 rounded-lg text-[10px] font-bold uppercase">QUÁ HẠN</span>
-                      ) : task.Status === 'Hoàn thành' ? (
-                        <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-bold uppercase">ĐÃ XONG</span>
-                      ) : (
-                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-[10px] font-bold uppercase">{task.Status || 'Đang xử lý'}</span>
+                      {(() => {
+                        const count = (task.History || '').split('[ĐỒNG Ý GIA HẠN]').length - 1;
+                        if (count > 0) {
+                          return (
+                             <span className="text-[10px] text-amber-600 font-bold whitespace-nowrap bg-amber-50 px-2 py-0.5 rounded mt-1 border border-amber-200" title={`Hồ sơ này đã được gia hạn ${count} lần`}>
+                               Gia hạn lần {task.Status === 'Xin gia hạn' ? count + 1 : count}
+                             </span>
+                          );
+                        } else if (task.Status === 'Xin gia hạn') {
+                          return (
+                             <span className="text-[10px] text-amber-600 font-bold whitespace-nowrap bg-amber-50 px-2 py-0.5 rounded mt-1 border border-amber-200" title="Hồ sơ đang xin gia hạn lần đầu">
+                               Gia hạn lần 1
+                             </span>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                  </td>
+                  <td className="px-2 py-3 text-center">
+                    {task.Status === 'Quá hạn' ? (
+                      <span className="px-2 py-1 bg-rose-100 text-rose-700 rounded-lg text-[10px] font-bold uppercase">QUÁ HẠN</span>
+                    ) : task.Status === 'Xin gia hạn' ? (
+                      <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-lg text-[10px] font-bold uppercase cursor-help" title={`Xin gia hạn đến: ${task['Ngày xin gia hạn'] || 'N/A'}\nLý do: ${task['Lý do gia hạn'] || 'Không có'}`}>CHỜ DUYỆT GIA HẠN</span>
+                    ) : task.Status === 'Hoàn thành' ? (
+                      <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded-lg text-[10px] font-bold uppercase">Đã xong</span>
+                    ) : null}
+                  </td>
+                  <td className="px-2 py-3">
+                    <div className="flex flex-col gap-1 items-center justify-center">
+                      {task.File_URL && task.File_URL.split('\n').filter(Boolean).length > 0 && (
+                        <div className="flex flex-wrap gap-1 justify-center">
+                          {task.File_URL.split('\n').filter(Boolean).map((url: string, i: number) => (
+                            <a key={`assign-${i}`} href={url} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center p-1.5 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors" title={`Tải file giao việc ${i+1}`}>
+                              <FileText className="w-4 h-4" />
+                            </a>
+                          ))}
+                        </div>
                       )}
-                    </td>
-                    <td className="px-4 py-3">
-                       <div className="flex items-center justify-center gap-2">
-                         <button onClick={() => handleEdit(task)} className="p-1 text-gray-400 hover:text-primary transition-colors"><Eye className="w-4 h-4" /></button>
-                         {(user?.FullName === task.Lead_Assignee) && task.Status !== 'Hoàn thành' && (
-                           <button onClick={() => handleRequestApproval(task)} className="p-1 text-gray-400 hover:text-emerald-600 transition-colors"><CheckCircle className="w-4 h-4" /></button>
-                         )}
-                         {permissions.canDelete && <button onClick={() => handleDelete(task.Task_ID)} className="p-1 text-gray-400 hover:text-rose-600 transition-colors"><Trash2 className="w-4 h-4" /></button>}
-                       </div>
-                    </td>
-                  </tr>
-                )})}
-                {paginatedTasks.length === 0 && <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-500">Không có bản ghi nào.</td></tr>}
-              </tbody>
-            </table>
-          )}
-
-      </div>
+                      {task.Result_File_URL && task.Result_File_URL.split('\n').filter(Boolean).length > 0 && (
+                        <div className="flex flex-wrap gap-1 justify-center mt-1 pt-1 border-t border-gray-100">
+                          {task.Result_File_URL.split('\n').filter(Boolean).map((url: string, i: number) => (
+                            <a key={`result-${i}`} href={url} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center p-1.5 bg-emerald-50 text-emerald-600 rounded-full hover:bg-emerald-100 transition-colors" title={`Tải file kết quả báo cáo ${i+1}`}>
+                              <FileCheck2 className="w-4 h-4" />
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                      {!task.File_URL && !task.Result_File_URL && (
+                        <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-[11px] font-medium">Chưa có</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-2 py-3">
+                    <div className="flex items-center justify-center gap-2">
+                        <button onClick={() => handleEdit(task)} className="p-1 text-gray-400 hover:text-primary transition-colors" title="Xem chi tiết">
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        {permissions.canEditDoc && (
+                          <button 
+                            onClick={() => handleEdit(task)}
+                            className="p-1.5 text-gray-400 hover:text-amber-600 transition-colors" 
+                            title="Sửa"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )}
+                        {(user?.FullName === task.Lead_Assignee) && task.Status !== 'Hoàn thành' && task.Status !== 'Chờ duyệt' && (
+                          <button onClick={() => handleRequestApproval(task)} className="p-1.5 text-gray-400 hover:text-emerald-600 transition-colors" title="Xin duyệt kết quả">
+                            <CheckCircle className="w-4 h-4" />
+                          </button>
+                        )}
+                        {(permissions.isLanhDao || permissions.isAdmin) && task.Status === 'Chờ duyệt' && (
+                          <>
+                            <button onClick={() => handleApprove(task, true)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors" title="Duyệt & Đóng việc">
+                              <FileCheck2 className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => handleApprove(task, false)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md transition-colors" title="Yêu cầu làm lại">
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                        {permissions.canDelete && (
+                          <button 
+                            onClick={() => handleDelete(task.Task_ID)}
+                            className="p-1.5 text-gray-400 hover:text-rose-600 transition-colors" 
+                            title="Xóa"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                  </td>
+                </tr>
+              ))}
+              {filteredTasks.length === 0 && (
+                <tr>
+                  <td colSpan={10} className="px-4 py-12 text-center text-gray-500">
+                    Không có bản ghi nào.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <Modal 

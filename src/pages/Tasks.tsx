@@ -347,7 +347,12 @@ export function Tasks() {
                           || (deadlineFilter === 'Quá hạn' && task.Status === 'Quá hạn')
                           || (deadlineFilter === 'Trong hạn' && ['Mới tiếp nhận', 'Chờ tiếp nhận', 'Đang xử lý'].includes(task.Status));
 
-    return matchSearch && matchStatus && matchPriority && matchAssignee && matchDeadline;
+    
+    const matchRole = roleFilter === 'ALL' ? true : (
+      roleFilter === 'LEAD' ? task.Role === 'Chủ trì' : task.Role === 'Phối hợp'
+    );
+    return matchSearch && matchStatus && matchPriority && matchAssignee && matchDeadline && matchRole;
+
   });
 
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);

@@ -344,6 +344,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                 DataRemoting.getDoc('qlvb.van_ban_den.getDcmTrackActivitiLog("' + doc_id + '","QLVB_DNI_UBXPHURIENG.","","","1","' + doc_id + '")', function(htmlData) {
                                     let coAssignees = [];
                                     let deadline = '';
+                                    let leadAssigneeLog = '';
                                     if (htmlData) {
                                         const txt = document.createElement("textarea");
                                         txt.innerHTML = htmlData;
@@ -351,7 +352,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                         
                                         // Tìm Người Xử Lý Chính (Chuyển tới) để lấy username
                                         const leadMatch = decodedHtml.match(/Chuyển tới\s*:\s*(.*?)<\/p>/i);
-                                        let leadAssigneeLog = "";
                                         if (leadMatch && leadMatch[1]) {
                                             let cleanLead = leadMatch[1].replace(/<[^>]+>/g, '').trim();
                                             cleanLead = cleanLead.replace(/\.$/, '');

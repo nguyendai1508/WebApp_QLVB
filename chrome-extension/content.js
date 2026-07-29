@@ -5,8 +5,16 @@ if (!window.qlvbContentScriptInjected) {
 // UI OVERLAY (Giao diện hiển thị trên trang)
 // ==============================
 function createOverlay() {
-    if (document.getElementById("qlvb-sync-overlay")) return;
-    const overlay = document.createElement("div");
+    let overlay = document.getElementById("qlvb-sync-overlay");
+    if (overlay) {
+        overlay.style.display = "block";
+        // Reset nội dung cũ nếu cần
+        const logContainer = document.getElementById("qlvb-sync-log");
+        if (logContainer) logContainer.innerHTML = "";
+        return;
+    }
+    
+    overlay = document.createElement("div");
     overlay.id = "qlvb-sync-overlay";
     overlay.innerHTML = `
         <style>

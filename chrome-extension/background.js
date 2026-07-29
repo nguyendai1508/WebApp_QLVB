@@ -57,9 +57,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             try {
                 // Lấy danh sách văn bản và nhân viên hiện tại
                 const [docsRes, staffRes, usersRes] = await Promise.all([
-                    fetch(`${FIREBASE_URL}/incomingDocs.json`).then(r => r.json()),
-                    fetch(`${FIREBASE_URL}/staff.json`).then(r => r.json()),
-                    fetch(`${FIREBASE_URL}/users.json`).then(r => r.json())
+                    fetch(`${FIREBASE_URL}/incomingDocs.json`, { cache: 'no-store' }).then(r => r.json()),
+                    fetch(`${FIREBASE_URL}/staff.json`, { cache: 'no-store' }).then(r => r.json()),
+                    fetch(`${FIREBASE_URL}/users.json`, { cache: 'no-store' }).then(r => r.json())
                 ]);
                 
                 const existingDocs = docsRes ? Object.values(docsRes) : [];

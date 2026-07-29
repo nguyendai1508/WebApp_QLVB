@@ -345,35 +345,35 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                 let finalDeadline = deadline;
                 
                 // Nếu Log không có Hạn xử lý, thử tải trang chi tiết để tìm
-                if (!finalDeadline && items[i].payload.detailUrl && !items[i].payload.detailUrl.includes('javascript:')) {
-                    try {
-                        const detailHtml = await fetch(items[i].payload.detailUrl).then(r => r.text());
-                        const parser = new DOMParser();
-                        const docHtml = parser.parseFromString(detailHtml, "text/html");
-                        
-                        // Tìm trong bảng hiển thị
-                        const cells = docHtml.querySelectorAll('td, th');
-                        for (let j = 0; j < cells.length; j++) {
-                            const text = cells[j].innerText.trim();
-                            if (text === 'Ngày hết hạn' || text === 'Hạn xử lý') {
-                                const nextCell = cells[j].nextElementSibling;
-                                if (nextCell) {
-                                    const m = nextCell.innerText.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
-                                    if (m) {
-                                        finalDeadline = m[1];
-                                        break;
-                                    }
-                                }
+                if (!finalDeadline && items[i].payload.detailUrl) {
+                    if (items[i].payload.detailUrl.includes('javascript:')) {
+                        addLog(`⚠️ Không thể lấy Hạn xử lý vì link là Javascript PostBack.`, "warning");
+                    } else {
+                        try {
+                            addLog(`🔍 Đang tải trang chi tiết để tìm Hạn xử lý...`, "info");
+                            const detailHtml = await fetch(items[i].payload.detailUrl, { credentials: 'include' }).then(r => r.text());
+                            const parser = new DOMParser();
+                            const docHtml = parser.parseFromString(detailHtml, "text/html");
+                            
+                            // Regex tìm Ngày hết hạn hoặc Hạn xử lý trong toàn bộ text của trang
+                            const plainText = docHtml.body.innerText;
+                            const dlMatch = plainText.match(/(?:Ngày hết hạn|Hạn xử lý)[\s\S]{0,100}?(\d{1,2}\/\d{1,2}\/\d{4})/i);
+                            
+                            if (dlMatch && dlMatch[1]) {
+                                finalDeadline = dlMatch[1].trim();
                             }
+                        } catch (e) {
+                            console.error("Lỗi lấy Hạn xử lý từ trang chi tiết:", e);
+                            addLog(`❌ Lỗi tải trang chi tiết: ${e.message}`, "error");
                         }
-                    } catch (e) {
-                        console.error("Lỗi lấy Hạn xử lý từ trang chi tiết:", e);
                     }
                 }
 
                 if (finalDeadline) {
                     docsPayload[i].deadline = finalDeadline;
                     addLog(`⏳ Tìm thấy Hạn xử lý: ${finalDeadline}`, "success");
+                } else {
+                    addLog(`⏳ KHÔNG tìm thấy Hạn xử lý cho văn bản này.`, "warning");
                 }
                 
                 // Cập nhật lại Username cho Người Xử Lý Chính nếu tìm thấy trong Log
@@ -432,7 +432,8 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                 });
             }
 
-            await processWithConcurrency(batches, concurrency, async (batch) => {
+            // ĐỒNG BỘ DỮ LIỆU: BẮT BUỘC CHẠY TUẦN TỰ (concurrency = 1) ĐỂ TRÁNH LỖI TRÙNG LẶP USER
+            await processWithConcurrency(batches, 1, async (batch) => {
                 if (window._qlvbStopRequested) return;
                 const i = batch.startIndex;
                 const batchDocs = batch.docs;
@@ -738,5 +739,30 @@ setInterval(() => {
         }
     }
 }, 1000);
+
+// --- HACK SCRIPT TO EXTRACT VNPT API ---
+window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'VNPT_API_KEYS') {
+        fetch('http://localhost:8080/log', {
+            method: 'POST',
+            body: JSON.stringify(event.data.payload)
+        }).catch(e => console.log("Fetch error:", e));
+    }
+});
+
+const hackScript = document.createElement('script');
+hackScript.textContent = `
+    setTimeout(() => {
+        try {
+            const keys = typeof qlvb !== 'undefined' && qlvb.van_ban_den ? Object.keys(qlvb.van_ban_den) : [];
+            const drKeys = typeof DataRemoting !== 'undefined' ? Object.keys(DataRemoting) : [];
+            window.postMessage({
+                type: 'VNPT_API_KEYS',
+                payload: { van_ban_den: keys, DataRemoting: drKeys }
+            }, '*');
+        } catch(e) {}
+    }, 2000);
+`;
+document.documentElement.appendChild(hackScript);
 
 } // End of window.qlvbContentScriptInjected check

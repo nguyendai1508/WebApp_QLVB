@@ -358,18 +358,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                             leadAssigneeLog = cleanLead;
                                         }
 
-                                        // Tìm Đồng xử lý hoặc Đồng gửi (bóc toàn bộ text để giữ lại Username trong ngoặc)
-                                        const coAssigneeMatch = decodedHtml.match(/(?:Đồng xử lý|Đồng gửi)\s*:\s*(.*?)<\/p>/i);
-                                        if (coAssigneeMatch && coAssigneeMatch[1]) {
-                                            const namesHtml = coAssigneeMatch[1];
-                                            let cleanNames = namesHtml.replace(/<[^>]+>/g, '').trim();
-                                            cleanNames = cleanNames.replace(/\.$/, ''); // Xóa dấu chấm cuối câu
-                                            // VNPT dùng dấu chấm (.) hoặc dấu phẩy (,) để phân cách. 
-                                            // Chú ý: Trong username CŨNG CÓ dấu chấm (vd: tiennh.ubxphurieng).
-                                            // Nên chỉ split bằng phẩy, HOẶC bằng dấu chấm nếu phía trước nó là dấu ngoặc đóng ")".
-                                            const arr = cleanNames.split(/,\s*|(?<=\))\s*\.\s*/).map(s => s.trim()).filter(s => s !== '');
-                                            coAssignees = arr;
+                                        // Tìm TẤT CẢ Đồng xử lý và Đồng gửi trong toàn bộ lịch sử (có thể có nhiều dòng)
+                                        const coAssigneeRegex = /(?:Đồng xử lý|Đồng gửi)\s*:\s*(.*?)<\/p>/gi;
+                                        let allCoAssignees = [];
+                                        let matchResult;
+                                        while ((matchResult = coAssigneeRegex.exec(decodedHtml)) !== null) {
+                                            if (matchResult[1]) {
+                                                const namesHtml = matchResult[1];
+                                                let cleanNames = namesHtml.replace(/<[^>]+>/g, '').trim();
+                                                cleanNames = cleanNames.replace(/\.$/, ''); // Xóa dấu chấm cuối câu
+                                                const arr = cleanNames.split(/,\s*|(?<=\))\s*\.\s*/).map(s => s.trim()).filter(s => s !== '');
+                                                allCoAssignees = allCoAssignees.concat(arr);
+                                            }
                                         }
+                                        // Lọc bỏ các giá trị trùng lặp
+                                        coAssignees = [...new Set(allCoAssignees)];
 
                                         // Tìm Ngày hết hạn bằng cách xóa sạch thẻ HTML trước
                                         const plainText = decodedHtml.replace(/<[^>]+>/g, ' ');

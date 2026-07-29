@@ -317,14 +317,14 @@ export function IncomingDocs() {
                   </td>
                   <td className="px-4 py-3 text-gray-600">{doc.Issuer}</td>
                   <td className="px-4 py-3">
-                    <span className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium">
+                    <div className="bg-gray-100 text-gray-700 rounded-lg text-xs font-medium px-2.5 py-1 max-w-[150px] line-clamp-2" title={doc.Lead_Assignee}>
                       {doc.Lead_Assignee || 'Chưa có'}
-                    </span>
+                    </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium max-w-[150px] line-clamp-2" title={doc.Co_Assignee}>
+                    <div className="bg-gray-100 text-gray-700 rounded-lg text-xs font-medium px-2.5 py-1 max-w-[150px] line-clamp-2" title={doc.Co_Assignee}>
                       {doc.Co_Assignee || 'Chưa có'}
-                    </span>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-gray-600">{doc.Deadline}</td>
                   <td className="px-4 py-3 text-center">

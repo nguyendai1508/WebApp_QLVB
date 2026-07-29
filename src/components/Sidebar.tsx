@@ -37,24 +37,26 @@ export function Sidebar() {
   ].filter(item => item.show);
 
   return (
-    <div className="w-64 bg-white border-r h-screen flex flex-col fixed left-0 top-0">
-      <div className="p-5 flex items-center gap-3">
-        <div className="bg-primary text-white p-2.5 rounded-xl">
+    <div className="group w-[72px] hover:w-64 bg-white border-r h-screen flex flex-col fixed left-0 top-0 transition-all duration-300 z-50 overflow-x-hidden">
+      <div className="p-4 flex items-center gap-3 w-64">
+        <div className="bg-primary text-white p-2.5 rounded-xl flex-shrink-0">
           <FileText className="w-5 h-5" />
         </div>
-        <div>
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
           <h1 className="font-bold text-gray-900 leading-tight">QL Văn bản</h1>
           <p className="text-xs text-gray-500">Đến · Đi · Công việc</p>
         </div>
       </div>
       
-      <div className="px-4 mb-4">
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      <div className="px-3 mb-4 w-64 overflow-hidden">
+        <div className="relative group/search flex items-center">
+          <div className="w-[48px] flex items-center justify-center flex-shrink-0">
+            <Search className="w-5 h-5 text-gray-400 group-hover:text-gray-400 transition-colors" />
+          </div>
           <input 
             type="text" 
-            placeholder="Tra cứu nhanh theo mã..." 
-            className="w-full pl-9 pr-4 py-2 bg-gray-50 border-transparent rounded-lg text-sm focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+            placeholder="Tra cứu nhanh..." 
+            className="w-[calc(100%-48px)] pr-4 py-2 bg-gray-50 border-transparent rounded-lg text-sm focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all opacity-0 group-hover:opacity-100"
           />
         </div>
       </div>
@@ -72,26 +74,28 @@ export function Sidebar() {
               }}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors",
+                  "flex items-center px-3 py-2.5 rounded-xl text-sm transition-colors w-64 overflow-hidden",
                   isActive 
                     ? "bg-[#e6f4ea] text-primary font-bold" 
                     : "text-gray-600 font-medium hover:bg-gray-50 hover:text-gray-900"
                 )
               }
             >
-              <item.icon className="w-5 h-5" />
-              {item.name}
+              <div className="w-6 flex items-center justify-center flex-shrink-0 mr-3">
+                <item.icon className="w-5 h-5" />
+              </div>
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">{item.name}</span>
             </NavLink>
           ))}
         </nav>
       </div>
 
-      <div className="p-4 border-t">
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
-          <div className="bg-primary/10 text-primary p-2 rounded-full">
+      <div className="p-3 border-t w-64">
+        <div className="flex items-center gap-3 p-2 rounded-lg bg-gray-50">
+          <div className="bg-primary/10 text-primary p-2 rounded-full flex-shrink-0">
             <ShieldCheck className="w-5 h-5" />
           </div>
-          <div>
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap overflow-hidden">
             <p className="text-sm font-medium text-gray-900">{user?.Role || 'Admin'}</p>
             <p className="text-xs text-gray-500">{user?.FullName || user?.Username || 'Người dùng'}</p>
           </div>

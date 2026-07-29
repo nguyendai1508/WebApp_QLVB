@@ -687,9 +687,9 @@ export function Tasks() {
                     {task.Assign_Date}
                   </td>
                   <td className="px-2 py-3">
-                    <span className="px-2.5 py-1 bg-[#e6f4ea] text-primary rounded-lg text-xs font-bold whitespace-nowrap">
+                    <div className="bg-[#e6f4ea] text-primary rounded-lg text-xs font-bold px-2 py-1 max-w-[150px] line-clamp-2" title={task.Lead_Assignee}>
                       {task.Lead_Assignee || 'Chưa phân công'}
-                    </span>
+                    </div>
                   </td>
                   <td className="px-2 py-3 text-gray-600 whitespace-nowrap">{task.Deadline}</td>
                   <td className="px-2 py-3 text-center">

@@ -16,7 +16,7 @@ export function MainLayout() {
   return (
     <div className="flex min-h-screen bg-[#f3f4f6]">
       <Sidebar />
-      <div className="flex-1 ml-64 flex flex-col">
+      <div className="flex-1 ml-[72px] flex flex-col">
         <Topbar />
         <main className="flex-1 p-8 overflow-x-hidden relative">
 

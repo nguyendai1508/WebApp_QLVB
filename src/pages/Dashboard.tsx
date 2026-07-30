@@ -676,51 +676,78 @@ export function Dashboard() {
                 <thead className="bg-gray-50 border-b border-gray-100 sticky top-0 z-10">
                   <tr>
                     <th className="px-4 py-3 font-bold text-gray-700 w-12 text-center">STT</th>
-                    <th className="px-4 py-3 font-bold text-gray-700 w-24">Mã CV</th>
-                    <th className="px-4 py-3 font-bold text-gray-700 min-w-[200px] w-full">Nội dung</th>
-                    <th className="px-4 py-3 font-bold text-gray-700">Nguồn việc</th>
+                    <th className="px-4 py-3 font-bold text-gray-700 min-w-[300px] w-full">Nội dung / Trích yếu</th>
+                    <th className="px-4 py-3 font-bold text-gray-700">Lĩnh vực</th>
+                    <th className="px-4 py-3 font-bold text-gray-700 text-center">Độ khẩn</th>
                     <th className="px-4 py-3 font-bold text-gray-700">Người giao</th>
                     <th className="px-4 py-3 font-bold text-gray-700 text-center">Hạn xử lý</th>
                     <th className="px-4 py-3 font-bold text-gray-700 text-center">Trạng thái</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {matrixModal.tasks.map((t: any, idx: number) => (
-                    <tr key={idx} onClick={() => { setMatrixModal({ ...matrixModal, isOpen: false }); setViewTask(t); }} className="hover:bg-blue-50/50 transition-colors cursor-pointer group">
-                      <td className="px-4 py-3 text-center text-gray-400 font-medium">{idx + 1}</td>
-                      <td className="px-4 py-3 text-gray-600 font-mono text-xs">{t.Task_ID || '-'}</td>
-                      <td className="px-4 py-3">
-                        <div className="font-semibold text-gray-900 group-hover:text-primary transition-colors line-clamp-2 whitespace-normal min-w-[200px]" title={t.Content || t.Summary || 'Không có nội dung'}>
-                          {t.Content || t.Summary || <span className="text-gray-400 italic">Không có nội dung</span>}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-blue-700 text-xs font-semibold">{t.Linked_Doc_ID || 'Giao trực tiếp'}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 rounded bg-gray-100 text-gray-600 flex items-center justify-center text-[10px] font-bold">
-                            {(t.Assigner || 'H').charAt(0)}
+                  {matrixModal.tasks.map((t: any, idx: number) => {
+                    let displayContent = t.Content || t.Summary;
+                    if (!displayContent && t.Linked_Doc_ID) {
+                      const linkedDoc = incomingDocs.find((d: any) => d.Doc_ID === t.Linked_Doc_ID || d.id === t.Linked_Doc_ID);
+                      if (linkedDoc) {
+                        displayContent = `[VB: ${linkedDoc.Sign_Number}] ${linkedDoc.Summary}`;
+                      }
+                    }
+
+                    return (
+                      <tr key={idx} onClick={() => { setMatrixModal({ ...matrixModal, isOpen: false }); setViewTask(t); }} className="hover:bg-blue-50/50 transition-colors cursor-pointer group">
+                        <td className="px-4 py-3 text-center text-gray-400 font-medium">{idx + 1}</td>
+                        <td className="px-4 py-3">
+                          <div className="font-semibold text-gray-900 group-hover:text-primary transition-colors line-clamp-2 whitespace-normal min-w-[300px]" title={displayContent || 'Không có nội dung'}>
+                            {displayContent || <span className="text-gray-400 italic">Không có nội dung</span>}
                           </div>
-                          <span className="text-gray-700 font-medium">{t.Assigner || 'Hệ thống'}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`font-semibold ${t.Status === 'Quá hạn' ? 'text-rose-600' : 'text-gray-700'}`}>
-                          {t.Deadline || '-'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold whitespace-nowrap inline-flex items-center justify-center min-w-[80px] ${
-                          t.Status === 'Quá hạn' ? 'bg-rose-100 text-rose-700' :
-                          t.Status === 'Chờ duyệt' ? 'bg-amber-100 text-amber-700' :
-                          t.Status === 'Hoàn thành' ? 'bg-[#e6f4ea] text-emerald-700' :
-                          t.Status === 'Xin gia hạn' ? 'bg-purple-100 text-purple-700' :
-                          'bg-blue-100 text-blue-700'
-                        }`}>
-                          {t.Status || 'Không xác định'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                          {t.Role && (
+                             <span className={`mt-1 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${t.Role === 'Chủ trì' ? 'bg-red-50 text-red-700 border border-red-100' : 'bg-gray-50 text-gray-600 border border-gray-200'}`}>
+                               {t.Role === 'Chủ trì' ? 'CHỦ TRÌ' : 'PHỐI HỢP'}
+                             </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600 text-xs">{t.Category || '-'}</td>
+                        <td className="px-4 py-3 text-center">
+                          {t.Priority && t.Priority !== 'Bình thường' ? (
+                            <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase whitespace-nowrap ${
+                              t.Priority.includes('Hỏa') ? 'bg-red-100 text-red-700' :
+                              t.Priority.includes('khẩn') ? 'bg-orange-100 text-orange-700' :
+                              'bg-amber-100 text-amber-700'
+                            }`}>
+                              {t.Priority}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-[10px]">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 rounded bg-gray-100 text-gray-600 flex items-center justify-center text-[10px] font-bold">
+                              {(t.Assigner || 'H').charAt(0)}
+                            </div>
+                            <span className="text-gray-700 font-medium">{t.Assigner || 'Hệ thống'}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`font-semibold ${t.Status === 'Quá hạn' ? 'text-rose-600' : 'text-gray-700'}`}>
+                            {t.Deadline || '-'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold whitespace-nowrap inline-flex items-center justify-center min-w-[80px] ${
+                            t.Status === 'Quá hạn' ? 'bg-rose-100 text-rose-700' :
+                            t.Status === 'Chờ duyệt' ? 'bg-amber-100 text-amber-700' :
+                            t.Status === 'Hoàn thành' ? 'bg-[#e6f4ea] text-emerald-700' :
+                            t.Status === 'Xin gia hạn' ? 'bg-purple-100 text-purple-700' :
+                            'bg-blue-100 text-blue-700'
+                          }`}>
+                            {t.Status || 'Không xác định'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

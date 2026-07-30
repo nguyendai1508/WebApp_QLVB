@@ -668,45 +668,61 @@ export function Dashboard() {
       )}
 
       {/* Matrix Tasks Modal */}
-      <Modal isOpen={matrixModal.isOpen} title={matrixModal.title} onClose={() => setMatrixModal({ ...matrixModal, isOpen: false })}>
-        <div className="p-4 max-h-[80vh] overflow-y-auto">
+      <Modal maxWidth="max-w-5xl" isOpen={matrixModal.isOpen} title={matrixModal.title} onClose={() => setMatrixModal({ ...matrixModal, isOpen: false })}>
+        <div className="p-0 max-h-[80vh] overflow-y-auto custom-scrollbar">
           {matrixModal.tasks.length > 0 ? (
-            <div className="space-y-3">
-              {matrixModal.tasks.map((t: any, idx: number) => (
-                <div key={idx} className="p-3 border rounded-xl bg-white hover:bg-gray-50 transition-colors shadow-sm relative group cursor-pointer" onClick={() => {
-                  setMatrixModal({ ...matrixModal, isOpen: false });
-                  setViewTask(t);
-                }}>
-                  <div className="flex justify-between items-start gap-4 mb-2">
-                    <h4 className="font-bold text-sm text-gray-900 group-hover:text-primary transition-colors line-clamp-2">
-                      {t.Content || t.Summary || 'Không có nội dung'}
-                    </h4>
-                    <span className={`px-2 py-1 rounded text-[11px] font-bold whitespace-nowrap flex-shrink-0 ${
-                      t.Status === 'Quá hạn' ? 'bg-rose-100 text-rose-700' :
-                      t.Status === 'Chờ duyệt' ? 'bg-amber-100 text-amber-700' :
-                      t.Status === 'Hoàn thành' ? 'bg-[#e6f4ea] text-emerald-700' :
-                      'bg-blue-100 text-blue-700'
-                    }`}>
-                      {t.Status || 'Không xác định'}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
-                    <div>
-                      <span className="font-semibold text-gray-700">Mã CV: </span> {t.Task_ID}
-                    </div>
-                    <div>
-                      <span className="font-semibold text-gray-700">Hạn XL: </span> 
-                      <span className={t.Status === 'Quá hạn' ? 'text-rose-600 font-bold' : ''}>{t.Deadline || 'Không có'}</span>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="font-semibold text-gray-700">Nguồn việc: </span> {t.Linked_Doc_ID || 'Giao trực tiếp'}
-                    </div>
-                    <div className="col-span-2">
-                      <span className="font-semibold text-gray-700">Người giao: </span> {t.Assigner || 'Hệ thống'}
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div className="w-full">
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-gray-50 border-b border-gray-100 sticky top-0 z-10">
+                  <tr>
+                    <th className="px-4 py-3 font-bold text-gray-700 w-12 text-center">STT</th>
+                    <th className="px-4 py-3 font-bold text-gray-700 w-24">Mã CV</th>
+                    <th className="px-4 py-3 font-bold text-gray-700 min-w-[200px] w-full">Nội dung</th>
+                    <th className="px-4 py-3 font-bold text-gray-700">Nguồn việc</th>
+                    <th className="px-4 py-3 font-bold text-gray-700">Người giao</th>
+                    <th className="px-4 py-3 font-bold text-gray-700 text-center">Hạn xử lý</th>
+                    <th className="px-4 py-3 font-bold text-gray-700 text-center">Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {matrixModal.tasks.map((t: any, idx: number) => (
+                    <tr key={idx} onClick={() => { setMatrixModal({ ...matrixModal, isOpen: false }); setViewTask(t); }} className="hover:bg-blue-50/50 transition-colors cursor-pointer group">
+                      <td className="px-4 py-3 text-center text-gray-400 font-medium">{idx + 1}</td>
+                      <td className="px-4 py-3 text-gray-600 font-mono text-xs">{t.Task_ID || '-'}</td>
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-gray-900 group-hover:text-primary transition-colors line-clamp-2 whitespace-normal min-w-[200px]" title={t.Content || t.Summary || 'Không có nội dung'}>
+                          {t.Content || t.Summary || <span className="text-gray-400 italic">Không có nội dung</span>}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-blue-700 text-xs font-semibold">{t.Linked_Doc_ID || 'Giao trực tiếp'}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 rounded bg-gray-100 text-gray-600 flex items-center justify-center text-[10px] font-bold">
+                            {(t.Assigner || 'H').charAt(0)}
+                          </div>
+                          <span className="text-gray-700 font-medium">{t.Assigner || 'Hệ thống'}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`font-semibold ${t.Status === 'Quá hạn' ? 'text-rose-600' : 'text-gray-700'}`}>
+                          {t.Deadline || '-'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold whitespace-nowrap inline-flex items-center justify-center min-w-[80px] ${
+                          t.Status === 'Quá hạn' ? 'bg-rose-100 text-rose-700' :
+                          t.Status === 'Chờ duyệt' ? 'bg-amber-100 text-amber-700' :
+                          t.Status === 'Hoàn thành' ? 'bg-[#e6f4ea] text-emerald-700' :
+                          t.Status === 'Xin gia hạn' ? 'bg-purple-100 text-purple-700' :
+                          'bg-blue-100 text-blue-700'
+                        }`}>
+                          {t.Status || 'Không xác định'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
             <div className="py-12 text-center text-gray-500">

@@ -99,7 +99,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                             const staffIdToFind = existingUser.staffId || existingUser['Mã cán bộ'];
                             const existingStaff = staffList.find(s => s.Staff_ID === staffIdToFind || s.id === staffIdToFind);
                             if (existingStaff) {
-                                return existingStaff.id;
+                                return existingStaff.Full_Name || cleanName;
                             }
                         }
                     } else {
@@ -108,7 +108,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         if (matchedUsers.length === 1) {
                             const staffIdToFind = matchedUsers[0].staffId || matchedUsers[0]['Mã cán bộ'];
                             const existingStaff = staffList.find(s => s.Staff_ID === staffIdToFind || s.id === staffIdToFind);
-                            if (existingStaff) return existingStaff.id;
+                            if (existingStaff) return existingStaff.Full_Name || cleanName;
                         } else if (matchedUsers.length > 1) {
                             throw new Error(`KHÔNG THỂ PHÂN BIỆT: Có nhiều người tên "${cleanName}". VNPT không cung cấp Username cho người này!`);
                         }
@@ -161,10 +161,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         staffList.push({ id: newFirebaseStaffId, ...newStaff });
                         usersList.push({ id: newStaffId, ...newUser });
                         
-                        return newFirebaseStaffId;
+                        return newStaff.Full_Name;
                     } catch (err) {
                         console.error('Lỗi khi tự động tạo cán bộ/người dùng', err);
-                        return cleanName;
+                        return newStaff.Full_Name;
                     }
                 };
 
@@ -272,7 +272,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
-                                    Source: 'Văn bản đến', Linked_Doc_ID: newDocId, Category: 'Văn bản chỉ đạo', Priority: doc.doKhan || 'Bình thường', Status: 'Đang xử lý', Lead_Assignee: lId, Role: 'Chủ trì', Deadline: doc.deadline || '', Assigner: finalAssignerId, Assign_Date: finalAssignDate, createdAt: new Date().toISOString()
+                                    Source: 'Văn bản đến', Linked_Doc_ID: newDocId, Content: doc.trichYeu || doc.loaiVanBan || 'Chưa có nội dung', Category: 'Văn bản chỉ đạo', Priority: doc.doKhan || 'Bình thường', Status: 'Đang xử lý', Lead_Assignee: lId, Role: 'Chủ trì', Deadline: doc.deadline || '', Assigner: finalAssignerId, Assign_Date: finalAssignDate, createdAt: new Date().toISOString()
                                 })
                             });
                         }
@@ -285,7 +285,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
-                                    Source: 'Văn bản đến', Linked_Doc_ID: newDocId, Category: 'Văn bản chỉ đạo', Priority: doc.doKhan || 'Bình thường', Status: 'Đang xử lý', Lead_Assignee: coId, Role: 'Phối hợp', Deadline: doc.deadline || '', Assigner: finalAssignerId, Assign_Date: finalAssignDate, createdAt: new Date().toISOString()
+                                    Source: 'Văn bản đến', Linked_Doc_ID: newDocId, Content: doc.trichYeu || doc.loaiVanBan || 'Chưa có nội dung', Category: 'Văn bản chỉ đạo', Priority: doc.doKhan || 'Bình thường', Status: 'Đang xử lý', Lead_Assignee: coId, Role: 'Phối hợp', Deadline: doc.deadline || '', Assigner: finalAssignerId, Assign_Date: finalAssignDate, createdAt: new Date().toISOString()
                                 })
                             });
                         }

@@ -430,7 +430,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                             if (userSpan) {
                                                 assignerLog = userSpan.textContent.trim();
                                             }
-                                            assignDateLog = targetRow.getAttribute('daxl_date') || targetRow.getAttribute('log_date') || '';
+                                            
+                                            // Cách 1: Lấy cột td ngay trước cột Nội dung (link_param) vì cột này luôn chứa text ngày giờ
+                                            const linkParamTd = targetRow.querySelector('td[link_param]');
+                                            if (linkParamTd && linkParamTd.previousElementSibling) {
+                                                assignDateLog = linkParamTd.previousElementSibling.textContent.trim();
+                                            }
+                                            
+                                            // Cách 2: Lấy thuộc tính dự phòng từ thẻ tr
+                                            if (!assignDateLog) {
+                                                assignDateLog = targetRow.getAttribute('updated_date') || targetRow.getAttribute('daxl_date') || targetRow.getAttribute('log_date') || '';
+                                            }
                                         }
                                         
                                         // Lọc bỏ các giá trị trùng lặp

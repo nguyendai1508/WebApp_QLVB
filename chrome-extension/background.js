@@ -416,7 +416,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                                 const pText = p.textContent.trim();
                                                 if (pText.startsWith("Chuyển tới:")) {
                                                     const leadStr = pText.replace("Chuyển tới:", "").trim();
-                                                    leadAssigneeLog = leadStr.replace(/\.$/, '');
+                                                    const cleanLead = leadStr.replace(/\.$/, '');
+                                                    const arr = cleanLead.split(/,\s*|(?<=\))\s*\.\s*/).map(s => s.trim()).filter(s => s !== '');
+                                                    leadAssigneeLog = arr.join(',');
                                                 }
                                                 if (pText.startsWith("Đồng xử lý:")) {
                                                     const coopStr = pText.replace("Đồng xử lý:", "").trim();

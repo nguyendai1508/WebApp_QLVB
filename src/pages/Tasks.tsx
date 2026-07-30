@@ -1078,6 +1078,7 @@ export function Tasks() {
                   <th className="px-4 py-3 font-medium min-w-[250px]" onClick={() => requestSort('Linked_Doc_ID')}>Văn bản liên quan / Nội dung chỉ đạo</th>
                   <th className="px-4 py-3 font-medium cursor-pointer" onClick={() => requestSort('Lead_Assignee')}>Vai trò</th>
                   <th className="px-4 py-3 font-medium cursor-pointer" onClick={() => requestSort('Assigner')}>Người giao</th>
+                  <th className="px-4 py-3 font-medium cursor-pointer text-center" onClick={() => requestSort('Actual_Complete_Date')}>Ngày HT/Xin duyệt</th>
                   <th className="px-4 py-3 font-medium cursor-pointer text-center" onClick={() => requestSort('Deadline')}>Hạn xử lý</th>
                   <th className="px-4 py-3 font-medium cursor-pointer text-center" onClick={() => requestSort('Progress_Percentage')}>% HT</th>
                   <th className="px-4 py-3 font-medium cursor-pointer text-center" onClick={() => requestSort('Status')}>Trạng thái</th>
@@ -1133,6 +1134,9 @@ export function Tasks() {
                                 </>
                             );
                         })()}
+                    </td>
+                    <td className="px-4 py-3 text-center text-xs">
+                      {task.Actual_Complete_Date || '-'}
                     </td>
                     <td className="px-4 py-3 text-center text-xs font-medium text-gray-900">
                       {task.Deadline || 'Không hạn'}

@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Eye, Edit, Trash2, CheckCircle, Search, PlusCircle, ClipboardList, CalendarClock, CalendarX, User, FileText, ArrowUpDown, Filter, ChevronRight, ChevronDown, Layers, UserCheck, Users } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { Modal } from '@/components/Modal';
@@ -108,6 +109,9 @@ export function Tasks() {
 
   const { tasks, incomingDocs, catalogs, staff, initialize, setIsLoading, user } = useAppStore();
   const permissions = usePermissions();
+  const location = useLocation();
+  const initialState = location.state as any || {};
+
   const getCatalogOptions = (type: string) => catalogs.filter(c => c.Type === type).map(c => c.Value);
   
   const [viewMode, setViewMode] = useState<'ALL' | 'MY_TASKS' | 'ASSIGNED_BY_ME'>(
@@ -115,15 +119,45 @@ export function Tasks() {
   );
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('Tất cả trạng thái');
+  const [statusFilter, setStatusFilter] = useState(initialState.status || 'Tất cả trạng thái');
   const [priorityFilter, setPriorityFilter] = useState('Tất cả mức độ');
-  const [assigneeFilter, setAssigneeFilter] = useState('Tất cả cán bộ');
-  const [deadlineFilter, setDeadlineFilter] = useState('Tất cả');
+  const [assigneeFilter, setAssigneeFilter] = useState(initialState.assignee || 'Tất cả cán bộ');
+  const [deadlineFilter, setDeadlineFilter] = useState(initialState.deadline || 'Tất cả');
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [drawerTask, setDrawerTask] = useState<any>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [roleFilter, setRoleFilter] = useState<'ALL' | 'LEAD' | 'COOP'>('ALL');
+  const [roleFilter, setRoleFilter] = useState<'ALL' | 'LEAD' | 'COOP'>(initialState.role || 'ALL');
+
+  useEffect(() => {
+    const handleNavRefresh = (e: any) => {
+      if (e.detail === '/tasks') {
+        setSearchTerm('');
+        setStatusFilter('Tất cả trạng thái');
+        setPriorityFilter('Tất cả mức độ');
+        setAssigneeFilter('Tất cả cán bộ');
+        setDeadlineFilter('Tất cả');
+        setRoleFilter('ALL');
+        setViewMode((permissions.isAdmin || permissions.isLanhDao || permissions.isVanThu) ? 'ALL' : 'MY_TASKS');
+      }
+    };
+    window.addEventListener('navRefresh', handleNavRefresh);
+    return () => window.removeEventListener('navRefresh', handleNavRefresh);
+  }, [permissions]);
+
+  useEffect(() => {
+    if (initialState.status || initialState.assignee || initialState.deadline || initialState.role) {
+      if (initialState.status) setStatusFilter(initialState.status);
+      if (initialState.assignee) setAssigneeFilter(initialState.assignee);
+      if (initialState.deadline) setDeadlineFilter(initialState.deadline);
+      if (initialState.role) setRoleFilter(initialState.role);
+      
+      // Mở rộng viewMode sang ALL nếu được truyền bộ lọc (vì có thể xem chéo người khác)
+      if (permissions.isAdmin || permissions.isLanhDao || permissions.isVanThu) {
+        setViewMode('ALL');
+      }
+    }
+  }, [initialState, permissions]);
   const [expandedDocIds, setExpandedDocIds] = useState<Record<string, boolean>>({});
 
   const toggleDocExpand = (docId: string) => {

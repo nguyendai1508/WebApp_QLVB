@@ -5,6 +5,7 @@ import {
   RefreshCw, ListPlus, FilePlus, CheckCircle, UserPlus,
   Inbox, FileCheck2
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '@/store/useAppStore';
 import { IncomingDocForm } from '@/components/IncomingDocForm';
 import { OutgoingDocForm } from '@/components/OutgoingDocForm';
@@ -41,6 +42,7 @@ const ActionCard = ({ title, desc, icon: Icon, onClick }: any) => (
 );
 
 export function Dashboard() {
+  const navigate = useNavigate();
   const { incomingDocs, outgoingDocs, tasks, staff, initialize, setIsLoading, user } = useAppStore();
   const permissions = usePermissions();
 
@@ -485,19 +487,31 @@ export function Dashboard() {
                       <span>{row.name}</span>
                     </td>
                     <td className="px-4 py-3 text-gray-500">{row.dept}</td>
-                    <td className="px-4 py-3 text-center font-bold text-gray-900">{row.total}</td>
-                    <td className="px-4 py-3 text-center font-bold text-blue-700">{row.leadCount}</td>
-                    <td className="px-4 py-3 text-center font-bold text-purple-700">{row.coopCount}</td>
-                    <td className="px-4 py-3 text-center font-semibold text-blue-600">{row.inProgress}</td>
-                    <td className="px-4 py-3 text-center font-semibold text-amber-600">{row.pendingApproval}</td>
+                    <td className="px-4 py-3 text-center font-bold text-gray-900">
+                      <button onClick={() => navigate('/tasks', { state: { assignee: row.name } })} className="hover:underline cursor-pointer">{row.total}</button>
+                    </td>
+                    <td className="px-4 py-3 text-center font-bold text-blue-700">
+                      <button onClick={() => navigate('/tasks', { state: { assignee: row.name, role: 'LEAD' } })} className="hover:underline cursor-pointer">{row.leadCount}</button>
+                    </td>
+                    <td className="px-4 py-3 text-center font-bold text-purple-700">
+                      <button onClick={() => navigate('/tasks', { state: { assignee: row.name, role: 'COOP' } })} className="hover:underline cursor-pointer">{row.coopCount}</button>
+                    </td>
+                    <td className="px-4 py-3 text-center font-semibold text-blue-600">
+                      <button onClick={() => navigate('/tasks', { state: { assignee: row.name, status: 'Đang xử lý' } })} className="hover:underline cursor-pointer">{row.inProgress}</button>
+                    </td>
+                    <td className="px-4 py-3 text-center font-semibold text-amber-600">
+                      <button onClick={() => navigate('/tasks', { state: { assignee: row.name, status: 'Chờ duyệt' } })} className="hover:underline cursor-pointer">{row.pendingApproval}</button>
+                    </td>
                     <td className="px-4 py-3 text-center font-bold text-rose-600">
                       {row.overdue > 0 ? (
-                        <span className="px-2 py-0.5 bg-rose-100 text-rose-700 rounded-md shadow-xs">{row.overdue}</span>
+                        <button onClick={() => navigate('/tasks', { state: { assignee: row.name, deadline: 'Quá hạn' } })} className="px-2 py-0.5 bg-rose-100 text-rose-700 rounded-md shadow-xs hover:bg-rose-200 cursor-pointer">{row.overdue}</button>
                       ) : (
                         <span className="text-gray-300">0</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-center font-semibold text-emerald-600">{row.completed}</td>
+                    <td className="px-4 py-3 text-center font-semibold text-emerald-600">
+                      <button onClick={() => navigate('/tasks', { state: { assignee: row.name, status: 'Hoàn thành' } })} className="hover:underline cursor-pointer">{row.completed}</button>
+                    </td>
                     <td className="px-4 py-3 text-center font-bold text-gray-700">{row.rate}%</td>
                     <td className="px-4 py-3">
                       <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden flex">

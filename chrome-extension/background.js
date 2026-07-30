@@ -172,10 +172,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     const signNumber = (doc.soHieu || doc.soDen || '').trim();
                     const summary = (doc.trichYeu || '').trim();
 
-                    const isDuplicate = existingDocs.some(d => 
-                        (d.Sign_Number || '').trim() === signNumber && 
-                        (d.Summary || '').trim() === summary
-                    );
+                    const isDuplicate = existingDocs.some(d => {
+                        if (doc.doc_id && (d.Doc_ID === doc.doc_id || d.doc_id === doc.doc_id)) return true;
+                        return (d.Sign_Number || d.signNumber || '').trim() === signNumber && 
+                               (d.Summary || d.summary || '').trim() === summary;
+                    });
 
                     if (isDuplicate) continue;
 

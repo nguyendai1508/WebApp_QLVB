@@ -883,6 +883,7 @@ export function Tasks() {
                   <th className="px-4 py-3 font-medium">Lĩnh vực</th>
                   <th className="px-4 py-3 font-medium">Người giao</th>
                   <th className="px-4 py-3 font-medium text-center">Hạn xử lý</th>
+                  <th className="px-4 py-3 font-medium text-center">Ngày HT/Xin duyệt</th>
                   <th className="px-4 py-3 font-medium text-center">% HT</th>
                   <th className="px-4 py-3 font-medium text-center">Trạng thái</th>
                   <th className="px-4 py-3 font-medium text-center">Thao tác</th>
@@ -891,7 +892,8 @@ export function Tasks() {
               <tbody className="divide-y border-b border-gray-200">
                 {paginatedDocs.map((doc: any, dIdx: number) => {
                   const isExpanded = !!expandedDocIds[doc.docId];
-                  const leadName = doc.leadAssignee || doc.tasks.find((t: any) => t.Role === 'Chủ trì')?.Lead_Assignee || 'Chưa phân';
+                  const leadTasks = doc.tasks.filter((t: any) => t.Role === 'Chủ trì');
+                  const leadName = doc.leadAssignee || (leadTasks.length > 0 ? leadTasks.map((t: any) => t.Lead_Assignee).join(', ') : 'Chưa phân');
                   const coopCount = doc.coopCount || doc.tasks.filter((t: any) => t.Role === 'Phối hợp').length;
 
                   return (
@@ -951,6 +953,7 @@ export function Tasks() {
                           {doc.assignDate && <div className="text-[10px] text-gray-500 whitespace-nowrap">{doc.assignDate}</div>}
                         </td>
                         <td className="px-4 py-3 text-center text-xs font-medium text-gray-900">{doc.deadline || '-'}</td>
+                        <td className="px-4 py-3 text-center text-xs font-medium text-gray-400">-</td>
                         <td className="px-4 py-3 text-center">
                           <div className="w-16 mx-auto bg-gray-200 rounded-full h-2 mt-1">
                             <div 
@@ -1025,6 +1028,9 @@ export function Tasks() {
                                     </>
                                   );
                               })()}
+                          </td>
+                          <td className="px-4 py-2.5 text-center text-xs">
+                            {task.Deadline || '-'}
                           </td>
                           <td className="px-4 py-2.5 text-center text-xs">
                             {task.Actual_Complete_Date || '-'}

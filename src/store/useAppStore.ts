@@ -55,7 +55,7 @@ const processStatus = (items: any[]) => {
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
-  user: null, 
+  user: sessionStorage.getItem('qlvb_user') ? JSON.parse(sessionStorage.getItem('qlvb_user')!) : null, 
   catalogs: [],
   staff: [],
   incomingDocs: [],
@@ -66,7 +66,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   isInitialized: false,
 
   setUser: (user) => {
-    if (!user) return set({ user: null });
+    if (!user) {
+      sessionStorage.removeItem('qlvb_user');
+      return set({ user: null });
+    }
     const role = user.role || user.Role || user['Phân quyền'] || user['Quyền hạn'] || 'Chuyên viên';
     const fullName = user.fullName || user.FullName || user.Full_Name || user['Họ tên cán bộ'] || user['Tên người dùng'] || user.username || user['Tên đăng nhập'] || 'Người dùng';
     const username = user.username || user.Username || user['Tên đăng nhập'] || '';
@@ -80,6 +83,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       role,
       Role: role
     };
+    sessionStorage.setItem('qlvb_user', JSON.stringify(normalized));
     set({ user: normalized });
   },
   setIsLoading: (loading) => set({ isLoading: loading }),

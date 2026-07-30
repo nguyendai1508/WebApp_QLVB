@@ -5,7 +5,7 @@ import { ShieldCheck, Loader2 } from 'lucide-react';
 
 export function Login() {
   const { setUser, initialize } = useAppStore();
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState(localStorage.getItem('qlvb_remembered_username') || '');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -18,6 +18,7 @@ export function Login() {
     try {
       const res = await api.login({ username, password });
       if (res.success) {
+        localStorage.setItem('qlvb_remembered_username', username);
         setUser(res.user);
         await initialize();
       } else {

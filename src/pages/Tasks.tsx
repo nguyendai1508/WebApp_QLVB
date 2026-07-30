@@ -616,7 +616,13 @@ export function Tasks() {
       group.totalProgress += Number(t.Progress_Percentage) || 0;
       
       if (t.Role === 'Chủ trì') {
-          group.leadAssignee = t.Lead_Assignee;
+          if (group.leadAssignee) {
+              if (!group.leadAssignee.includes(t.Lead_Assignee)) {
+                  group.leadAssignee += ', ' + t.Lead_Assignee;
+              }
+          } else {
+              group.leadAssignee = t.Lead_Assignee;
+          }
           group.deadline = t.Deadline || group.deadline;
           if (!['Quá hạn', 'Sắp hạn'].includes(group.status)) {
               group.status = t.Status;

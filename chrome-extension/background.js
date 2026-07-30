@@ -430,7 +430,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                             if (userSpan) {
                                                 assignerLog = userSpan.textContent.trim();
                                             }
-                                            assignDateLog = targetRow.getAttribute('daxl_date') || '';
+                                            assignDateLog = targetRow.getAttribute('daxl_date') || targetRow.getAttribute('log_date') || '';
                                         }
                                         
                                         // Lọc bỏ các giá trị trùng lặp

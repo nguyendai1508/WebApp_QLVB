@@ -893,7 +893,7 @@ export function TaskForm({ initialData, autoFillFromDoc, isReadOnly, onSubmit, o
             </button>
           </div>
           {pendingComments.length > 0 && (
-            <p className="text-[11px] text-rose-500 font-medium mb-3 italic">* Bình luận mới đã được ghi nhận. Vui lòng nhấn "Lưu cập nhật" ở dưới cùng để lưu vĩnh viễn vào hệ thống.</p>
+            <p className="text-[11px] text-rose-500 font-medium mb-3 italic">* Bình luận mới đã tạm ghi nhận. Vui lòng nhấn nút "Lưu tiến độ" ở dưới cùng để lưu vĩnh viễn vào hệ thống.</p>
           )}
           
           <div className="bg-gray-50 border rounded-xl p-4 max-h-60 overflow-y-auto custom-scrollbar">

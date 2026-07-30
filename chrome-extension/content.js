@@ -333,7 +333,7 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                 }
                 
                 // Lấy Đồng xử lý và Hạn xử lý
-                const { coAssignees, deadline, leadAssigneeLog } = await getCoAssigneesForDoc(items[i].doc_id);
+                const { coAssignees, deadline, leadAssigneeLog, assignerLog, assignDateLog } = await getCoAssigneesForDoc(items[i].doc_id);
                 if (coAssignees && coAssignees.length > 0) {
                     docsPayload[i].coAssignee = coAssignees.join(', ');
                     addLog(`👥 Đã tìm thấy ${coAssignees.length} Đồng xử lý.`, "success");
@@ -342,6 +342,14 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                 // Nếu trong Log (DWR) có tên người xử lý chính (thường đi kèm Username đầy đủ), lấy nó đè lên tên ở bảng ngoài (vì bảng ngoài hay bị ẩn Username)
                 if (leadAssigneeLog) {
                     docsPayload[i].nguoiSoan = leadAssigneeLog;
+                }
+                
+                // Gán Người giao (Assigner) và Ngày giao (Assign Date) từ Log
+                if (assignerLog) {
+                    docsPayload[i].assignerLog = assignerLog;
+                }
+                if (assignDateLog) {
+                    docsPayload[i].assignDateLog = assignDateLog;
                 }
                 
                 // Nếu Log không có Hạn xử lý, dùng Hạn xử lý trên bảng chính

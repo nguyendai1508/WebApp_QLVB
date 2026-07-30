@@ -581,6 +581,16 @@ export function Tasks() {
       const docId = t.Linked_Doc_ID || 'Khác';
       if (!docGroups[docId]) {
          const incomingDoc = incomingDocs.find((d: any) => d.Doc_ID === docId || d.id === docId);
+         
+         // Map Assigner ID to Name
+         let assignerName = t.Assigner || '';
+         if (assignerName && assignerName !== 'Hệ thống') {
+             const assignerStaff = staff.find((s: any) => s.Staff_ID === assignerName || s.id === assignerName);
+             if (assignerStaff) {
+                 assignerName = assignerStaff.Full_Name || assignerStaff.fullName || assignerStaff.Username || assignerName;
+             }
+         }
+         
          docGroups[docId] = {
            docId,
            tasks: [],
@@ -591,7 +601,8 @@ export function Tasks() {
            coopCount: 0,
            priority: 'Bình thường',
            category: t.Category || '',
-           assigner: t.Assigner || '',
+           assigner: assignerName,
+           assignDate: t.Assign_Date || '',
            deadline: '',
            totalProgress: 0,
            taskCount: 0,
@@ -935,7 +946,10 @@ export function Tasks() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-gray-600 text-xs">{doc.category}</td>
-                        <td className="px-4 py-3 text-gray-600 text-xs">{doc.assigner || 'Hệ thống'}</td>
+                        <td className="px-4 py-3 text-gray-600 text-xs">
+                          <div className="font-semibold text-blue-800">{doc.assigner || 'Hệ thống'}</div>
+                          {doc.assignDate && <div className="text-[10px] text-gray-500 whitespace-nowrap">{doc.assignDate}</div>}
+                        </td>
                         <td className="px-4 py-3 text-center text-xs font-medium text-gray-900">{doc.deadline || '-'}</td>
                         <td className="px-4 py-3 text-center">
                           <div className="w-16 mx-auto bg-gray-200 rounded-full h-2 mt-1">
@@ -997,7 +1011,21 @@ export function Tasks() {
                             )}
                           </td>
                           <td className="px-4 py-2.5 text-gray-600 text-xs">{task.Category}</td>
-                          <td className="px-4 py-2.5 text-gray-600 text-xs">{task.Assigner || 'Hệ thống'}</td>
+                          <td className="px-4 py-2.5 text-gray-600 text-xs">
+                              {(() => {
+                                  let aName = task.Assigner || 'Hệ thống';
+                                  if (aName !== 'Hệ thống') {
+                                      const st = staff.find((s: any) => s.Staff_ID === aName || s.id === aName);
+                                      if (st) aName = st.Full_Name || st.fullName || st.Username || aName;
+                                  }
+                                  return (
+                                    <>
+                                        <div className="font-semibold text-blue-800">{aName}</div>
+                                        {task.Assign_Date && <div className="text-[10px] text-gray-500 whitespace-nowrap">{task.Assign_Date}</div>}
+                                    </>
+                                  );
+                              })()}
+                          </td>
                           <td className="px-4 py-2.5 text-center text-xs">
                             {task.Actual_Complete_Date || '-'}
                           </td>
@@ -1091,7 +1119,21 @@ export function Tasks() {
                         <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-[10px] font-bold whitespace-nowrap">PHỐI HỢP</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-gray-600 text-xs">{task.Assigner || 'Hệ thống'}</td>
+                    <td className="px-4 py-3 text-gray-600 text-xs">
+                        {(() => {
+                            let aName = task.Assigner || 'Hệ thống';
+                            if (aName !== 'Hệ thống') {
+                                const st = staff.find((s: any) => s.Staff_ID === aName || s.id === aName);
+                                if (st) aName = st.Full_Name || st.fullName || st.Username || aName;
+                            }
+                            return (
+                                <>
+                                    <div className="font-semibold text-blue-800">{aName}</div>
+                                    {task.Assign_Date && <div className="text-[10px] text-gray-500 whitespace-nowrap">{task.Assign_Date}</div>}
+                                </>
+                            );
+                        })()}
+                    </td>
                     <td className="px-4 py-3 text-center text-xs font-medium text-gray-900">
                       {task.Deadline || 'Không hạn'}
                     </td>

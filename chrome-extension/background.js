@@ -252,6 +252,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     
                     const newDocId = docSaveRes.name;
 
+                    // Lấy Assigner (Người giao) và Assign_Date (Ngày giao)
+                    let finalAssignerId = 'Hệ thống';
+                    if (doc.assignerLog) {
+                        const aId = await getStaffId(doc.assignerLog.trim());
+                        if (aId) finalAssignerId = aId;
+                    } else {
+                        // Nếu không có trong log, mặc định là Lê Tiến Lâm theo yêu cầu
+                        const defaultAssigner = await getStaffId("Lê Tiến Lâm (lamlt.ubxphurieng)");
+                        if (defaultAssigner) finalAssignerId = defaultAssigner;
+                    }
+                    
+                    const finalAssignDate = doc.assignDateLog || '';
+
                     // Tạo Task chủ trì cho từng người
                     for (const lId of leadIdList) {
                         if (lId) {
@@ -259,7 +272,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
-                                    Source: 'Văn bản đến', Linked_Doc_ID: newDocId, Category: 'Văn bản chỉ đạo', Priority: doc.doKhan || 'Bình thường', Status: 'Đang xử lý', Lead_Assignee: lId, Role: 'Chủ trì', Deadline: doc.deadline || '', createdAt: new Date().toISOString()
+                                    Source: 'Văn bản đến', Linked_Doc_ID: newDocId, Category: 'Văn bản chỉ đạo', Priority: doc.doKhan || 'Bình thường', Status: 'Đang xử lý', Lead_Assignee: lId, Role: 'Chủ trì', Deadline: doc.deadline || '', Assigner: finalAssignerId, Assign_Date: finalAssignDate, createdAt: new Date().toISOString()
                                 })
                             });
                         }
@@ -272,7 +285,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
-                                    Source: 'Văn bản đến', Linked_Doc_ID: newDocId, Category: 'Văn bản chỉ đạo', Priority: doc.doKhan || 'Bình thường', Status: 'Đang xử lý', Lead_Assignee: coId, Role: 'Phối hợp', Deadline: doc.deadline || '', createdAt: new Date().toISOString()
+                                    Source: 'Văn bản đến', Linked_Doc_ID: newDocId, Category: 'Văn bản chỉ đạo', Priority: doc.doKhan || 'Bình thường', Status: 'Đang xử lý', Lead_Assignee: coId, Role: 'Phối hợp', Deadline: doc.deadline || '', Assigner: finalAssignerId, Assign_Date: finalAssignDate, createdAt: new Date().toISOString()
                                 })
                             });
                         }
@@ -352,7 +365,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                 DataRemoting.getDoc('qlvb.van_ban_den.getDcmTrackActivitiLog("' + doc_id + '","QLVB_DNI_UBXPHURIENG.","","","1","' + doc_id + '")', function(htmlData) {
                                     let coAssignees = [];
                                     let deadline = '';
-                                    let leadAssigneeLog = '';
+                                    let assignerLog = '';
+                                    let assignDateLog = '';
                                     if (htmlData) {
                                         const txt = document.createElement("textarea");
                                         txt.innerHTML = htmlData;
@@ -386,7 +400,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                             });
                                             
                                             // Lấy thông tin phân công ở dòng mới nhất (gần nhất) rồi dừng lại, không quét các dòng lịch sử cũ
-                                            if (foundAssignment) break;
+                                            if (foundAssignment) {
+                                                const userSpan = tr.querySelector('.log_user_xuly');
+                                                if (userSpan) {
+                                                    assignerLog = userSpan.textContent.trim();
+                                                }
+                                                assignDateLog = tr.getAttribute('daxl_date') || '';
+                                                break;
+                                            }
                                         }
                                         
                                         // Lọc bỏ các giá trị trùng lặp
@@ -399,7 +420,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                             deadline = deadlineMatch[1].trim();
                                         }
                                     }
-                                    resolve({ coAssignees, deadline, leadAssigneeLog });
+                                    resolve({ coAssignees, deadline, leadAssigneeLog, assignerLog, assignDateLog });
                                 });
                             } else {
                                 resolve({ coAssignees: [], deadline: '', leadAssigneeLog: '' });

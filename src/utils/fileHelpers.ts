@@ -11,12 +11,13 @@ export const fileToBase64 = (file: File): Promise<string> => {
 
 export const formatDateForInput = (dateStr?: string) => {
   if (!dateStr) return '';
-  const parts = dateStr.split('/');
+  const dateOnly = dateStr.split(' ')[0];
+  const parts = dateOnly.split('/');
   if (parts.length === 3) {
     const d = parts[0].padStart(2, '0');
     const m = parts[1].padStart(2, '0');
     const y = parts[2];
     return `${y}-${m}-${d}`;
   }
-  return dateStr;
+  return dateOnly;
 };

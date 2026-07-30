@@ -245,6 +245,11 @@ export function TaskForm({ initialData, autoFillFromDoc, isReadOnly, onSubmit, o
       if (pendingComments.length > 0) {
         customLog = pendingComments.join('\n\n') + (customLog ? '\n\n' + customLog : '');
       }
+      
+      const previousLog = initialData?.Audit_Trail || initialData?.auditLog || '';
+      if (previousLog) {
+        customLog = customLog ? customLog + '\n\n' + previousLog : previousLog;
+      }
       const nowObj = new Date();
       const todayISO = `${nowObj.getFullYear()}-${String(nowObj.getMonth() + 1).padStart(2, '0')}-${String(nowObj.getDate()).padStart(2, '0')} ${String(nowObj.getHours()).padStart(2, '0')}:${String(nowObj.getMinutes()).padStart(2, '0')}:${String(nowObj.getSeconds()).padStart(2, '0')}`;
 
@@ -894,7 +899,7 @@ export function TaskForm({ initialData, autoFillFromDoc, isReadOnly, onSubmit, o
           <div className="bg-gray-50 border rounded-xl p-4 max-h-60 overflow-y-auto custom-scrollbar">
             <div className="space-y-4 relative">
               <div className="absolute left-1 top-2 bottom-2 w-px bg-gray-200 z-0"></div>
-              {[...pendingComments, ...(initialData.History ? initialData.History.split('\n\n').filter(Boolean) : [])].map((log: string, index: number, arr: any[]) => {
+              {[...pendingComments, ...((initialData.Audit_Trail || initialData.auditLog || '').split('\n\n').filter(Boolean))].map((log: string, index: number, arr: any[]) => {
                 const firstBracketIndex = log.indexOf('] ');
                 let timeStr = '';
                 let content = log;

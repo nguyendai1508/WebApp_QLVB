@@ -357,28 +357,38 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                         const txt = document.createElement("textarea");
                                         txt.innerHTML = htmlData;
                                         const decodedHtml = txt.value;
+                                        const parser = new DOMParser();
+                                        const doc = parser.parseFromString(decodedHtml, 'text/html');
+                                        const rows = doc.querySelectorAll('tr[act_id]');
                                         
-                                        // Tìm Người Xử Lý Chính (Chuyển tới) để lấy username
-                                        const leadMatch = decodedHtml.match(/Chuyển tới\s*:\s*(.*?)<\/p>/i);
-                                        if (leadMatch && leadMatch[1]) {
-                                            let cleanLead = leadMatch[1].replace(/<[^>]+>/g, '').trim();
-                                            cleanLead = cleanLead.replace(/\.$/, '');
-                                            leadAssigneeLog = cleanLead;
-                                        }
-
-                                        // Tìm TẤT CẢ Đồng xử lý trong toàn bộ lịch sử (bỏ qua Đồng gửi vì thường gửi toàn cơ quan)
-                                        const coAssigneeRegex = /(?:Đồng xử lý)\s*:\s*(.*?)<\/p>/gi;
                                         let allCoAssignees = [];
-                                        let matchResult;
-                                        while ((matchResult = coAssigneeRegex.exec(decodedHtml)) !== null) {
-                                            if (matchResult[1]) {
-                                                const namesHtml = matchResult[1];
-                                                let cleanNames = namesHtml.replace(/<[^>]+>/g, '').trim();
-                                                cleanNames = cleanNames.replace(/\.$/, ''); // Xóa dấu chấm cuối câu
-                                                const arr = cleanNames.split(/,\s*|(?<=\))\s*\.\s*/).map(s => s.trim()).filter(s => s !== '');
-                                                allCoAssignees = allCoAssignees.concat(arr);
-                                            }
+                                        
+                                        for (const tr of rows) {
+                                            const pTags = tr.querySelectorAll('td[link_param] p');
+                                            let foundAssignment = false;
+                                            
+                                            pTags.forEach(p => {
+                                                const pText = p.textContent.trim();
+                                                
+                                                if (pText.startsWith("Chuyển tới:")) {
+                                                    const leadStr = pText.replace("Chuyển tới:", "").trim();
+                                                    leadAssigneeLog = leadStr.replace(/\.$/, '');
+                                                    foundAssignment = true;
+                                                }
+                                                
+                                                if (pText.startsWith("Đồng xử lý:")) {
+                                                    const coopStr = pText.replace("Đồng xử lý:", "").trim();
+                                                    const cleanCoop = coopStr.replace(/\.$/, '');
+                                                    const arr = cleanCoop.split(/,\s*|(?<=\))\s*\.\s*/).map(s => s.trim()).filter(s => s !== '');
+                                                    allCoAssignees = allCoAssignees.concat(arr);
+                                                    foundAssignment = true;
+                                                }
+                                            });
+                                            
+                                            // Lấy thông tin phân công ở dòng mới nhất (gần nhất) rồi dừng lại, không quét các dòng lịch sử cũ
+                                            if (foundAssignment) break;
                                         }
+                                        
                                         // Lọc bỏ các giá trị trùng lặp
                                         coAssignees = [...new Set(allCoAssignees)];
 

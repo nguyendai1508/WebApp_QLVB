@@ -339,6 +339,11 @@ async function startScraping(apiUrl, concurrency = 4, existingKeys = [], sendRes
                     addLog(`👥 Đã tìm thấy ${coAssignees.length} Đồng xử lý.`, "success");
                 }
                 
+                // Nếu trong Log (DWR) có tên người xử lý chính (thường đi kèm Username đầy đủ), lấy nó đè lên tên ở bảng ngoài (vì bảng ngoài hay bị ẩn Username)
+                if (leadAssigneeLog) {
+                    docsPayload[i].nguoiSoan = leadAssigneeLog;
+                }
+                
                 // Nếu Log không có Hạn xử lý, dùng Hạn xử lý trên bảng chính
                 let finalDeadline = items[i].payload.rowDeadline || deadline;
                 

@@ -643,7 +643,7 @@ export function Tasks() {
     });
 
     return Object.values(docGroups);
-  }, [sortedTasks, incomingDocs, viewMode]);
+  }, [sortedTasks, incomingDocs, staff, viewMode]);
 
   const paginatedDocs = viewMode === 'ALL'
     ? groupedDocs.slice(0, displayLimit)
@@ -882,7 +882,7 @@ export function Tasks() {
                   <th className="px-4 py-3 font-medium text-center">Ưu tiên</th>
                   <th className="px-4 py-3 font-medium">Lĩnh vực</th>
                   <th className="px-4 py-3 font-medium">Người giao</th>
-                  <th className="px-4 py-3 font-medium text-center">Ngày HT/Xin duyệt</th>
+                  <th className="px-4 py-3 font-medium text-center">Hạn xử lý</th>
                   <th className="px-4 py-3 font-medium text-center">% HT</th>
                   <th className="px-4 py-3 font-medium text-center">Trạng thái</th>
                   <th className="px-4 py-3 font-medium text-center">Thao tác</th>

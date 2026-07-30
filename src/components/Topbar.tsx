@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, LogOut, PlusCircle, MessageCircle, RefreshCw } from 'lucide-react';
+import { Search, LogOut, PlusCircle, MessageCircle, RefreshCw, Key } from 'lucide-react';
 import { api } from '@/services/api';
 import { useLocation } from 'react-router-dom';
 import { useAppStore } from '@/store/useAppStore';
@@ -18,6 +18,50 @@ export function Topbar() {
   const [showZaloGuide, setShowZaloGuide] = useState(false);
   const [showOutgoingModal, setShowOutgoingModal] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ old: '', new: '', confirm: '' });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordForm.new !== passwordForm.confirm) {
+      alert('Mật khẩu mới không khớp!');
+      return;
+    }
+    if (!user || (!user.id && !user['Mã người dùng'])) {
+      alert('Không tìm thấy thông tin tài khoản!');
+      return;
+    }
+    // Verify old password
+    const currentPass = user.password || user.Password || user['Mật khẩu'];
+    if (currentPass && currentPass !== passwordForm.old) {
+      alert('Mật khẩu cũ không đúng!');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const { api } = await import('@/services/api');
+      const userId = user.id || user['Mã người dùng'];
+      // Cập nhật cả 2 trường Tiếng Anh và Tiếng Việt để đồng bộ
+      const payload = {
+        password: passwordForm.new,
+        'Mật khẩu': passwordForm.new
+      };
+      const res = await api.updateUser(userId, payload);
+      if (res.success) {
+        alert('Đổi mật khẩu thành công! Vui lòng đăng nhập lại.');
+        setShowPasswordModal(false);
+        setUser(null); // Đăng xuất
+      } else {
+        alert('Lỗi: ' + res.message);
+      }
+    } catch (error) {
+      alert('Có lỗi xảy ra!');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
 
   const getPageTitle = () => {
     switch (location.pathname) {
@@ -98,17 +142,85 @@ export function Topbar() {
             <p className="text-sm font-bold text-gray-900">{user?.FullName || user?.['Họ tên cán bộ'] || user?.Username || 'Người dùng'}</p>
             <p className="text-xs text-gray-500 font-medium">{user?.Role || user?.['Phân quyền'] || 'Chuyên viên'}</p>
           </div>
-          <button 
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm font-medium"
-          >
-            <LogOut className="w-4 h-4" />
-            Đăng xuất
-          </button>
+          <div className="flex gap-1">
+            <button 
+              onClick={() => setShowPasswordModal(true)}
+              className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors text-sm font-medium"
+              title="Đổi mật khẩu"
+            >
+              <Key className="w-4 h-4" />
+              <span className="hidden sm:inline">Mật khẩu</span>
+            </button>
+            <button 
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm font-medium"
+              title="Đăng xuất"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Thoát</span>
+            </button>
+          </div>
         </div>
         </div>
       </div>
       
+      {/* Change Password Modal */}
+      {showPasswordModal && (
+        <Modal isOpen={showPasswordModal} title="Đổi mật khẩu" onClose={() => setShowPasswordModal(false)}>
+          <form onSubmit={handleChangePassword} className="space-y-4 p-4">
+            <div>
+              <label className="block text-sm font-bold text-primary mb-1">Mật khẩu cũ</label>
+              <input 
+                type="password" 
+                required 
+                value={passwordForm.old}
+                onChange={e => setPasswordForm({...passwordForm, old: e.target.value})}
+                className="w-full px-3 py-2 border rounded-xl outline-none focus:ring-1 focus:ring-primary focus:border-primary" 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-primary mb-1">Mật khẩu mới</label>
+              <input 
+                type="password" 
+                required 
+                minLength={6}
+                value={passwordForm.new}
+                onChange={e => setPasswordForm({...passwordForm, new: e.target.value})}
+                className="w-full px-3 py-2 border rounded-xl outline-none focus:ring-1 focus:ring-primary focus:border-primary" 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-primary mb-1">Xác nhận mật khẩu mới</label>
+              <input 
+                type="password" 
+                required 
+                minLength={6}
+                value={passwordForm.confirm}
+                onChange={e => setPasswordForm({...passwordForm, confirm: e.target.value})}
+                className="w-full px-3 py-2 border rounded-xl outline-none focus:ring-1 focus:ring-primary focus:border-primary" 
+              />
+            </div>
+            <div className="mt-6 flex justify-end gap-3 pt-4 border-t">
+              <button 
+                type="button" 
+                onClick={() => setShowPasswordModal(false)}
+                className="px-4 py-2 border text-gray-600 rounded-xl hover:bg-gray-50 font-bold"
+              >
+                Hủy
+              </button>
+              <button 
+                type="submit" 
+                disabled={isChangingPassword}
+                className="px-4 py-2 bg-primary text-white rounded-xl hover:bg-primary/90 font-bold disabled:opacity-50 flex items-center gap-2"
+              >
+                {isChangingPassword ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
+                Xác nhận đổi
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
       {showIncomingModal && (
         <IncomingDocForm 
           onClose={() => setShowIncomingModal(false)} 

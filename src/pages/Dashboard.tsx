@@ -125,6 +125,7 @@ export function Dashboard() {
       const completedTasks = allTasks.filter((t: any) => t.Status === 'Hoàn thành');
       const rate = allTasks.length > 0 ? Math.round((completedTasks.length / allTasks.length) * 100) : 0;
 
+      return {
         name,
         dept: s.Department || s['Phòng ban'] || 'Phòng chuyên môn',
         leadTasks,

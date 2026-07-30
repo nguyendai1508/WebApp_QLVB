@@ -189,11 +189,6 @@ export function TaskForm({ initialData, autoFillFromDoc, isReadOnly, onSubmit, o
       alert('Vui lòng chọn Ngày giao!');
       return;
     }
-    if (!currentData.Deadline) {
-      if (!window.confirm('Bạn chưa nhập hạn hoàn thành. Bạn có chắc chắn muốn tạo công việc không?')) {
-        return;
-      }
-    }
 
     setIsSubmitting(true);
     try {

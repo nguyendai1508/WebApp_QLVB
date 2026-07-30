@@ -388,7 +388,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                             });
                                             if (hasAssignment) {
                                                 const userSpan = tr.querySelector('.log_user_xuly');
-                                                if (userSpan && userSpan.textContent.toLowerCase().includes("lâm")) {
+                                                if (userSpan && userSpan.textContent.toLowerCase().includes("lê tiến lâm")) {
                                                     targetRow = tr;
                                                     break;
                                                 }

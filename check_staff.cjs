@@ -1,15 +1,15 @@
 const https = require('https');
-https.get('https://qlvb-phurieng-default-rtdb.asia-southeast1.firebasedatabase.app/staff.json', (res) => {
+const dbUrl = 'https://qlvb-phurieng-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+https.get(`${dbUrl}/staff.json`, (res) => {
   let data = '';
   res.on('data', chunk => data += chunk);
   res.on('end', () => {
-    try {
-      const parsed = JSON.parse(data);
-      const keys = Object.keys(parsed || {});
-      console.log('Total staff in DB:', keys.length);
-      keys.forEach(k => {
-          console.log(`ID: ${k}, Name: ${parsed[k].fullName || parsed[k].Full_Name}`);
-      });
-    } catch(e) { console.error(e); }
+    const staff = JSON.parse(data);
+    const names = Object.values(staff || {}).map(s => s.fullName || s.Full_Name);
+    console.log("Total staff in DB:", names.length);
+    const counts = {};
+    names.forEach(n => counts[n] = (counts[n] || 0) + 1);
+    console.log("Name counts:", counts);
   });
-}).on('error', console.error);
+});

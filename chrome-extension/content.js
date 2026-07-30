@@ -695,11 +695,11 @@ function injectFloatingButton() {
         btn.style.backgroundColor = '#3b82f6';
     };
 
-    btn.onclick = () => {
-        let isSyncAll = confirm("Bạn có muốn ĐỒNG BỘ TẤT CẢ CÁC TRANG không?\n\n- Chọn OK: Quét toàn bộ dữ liệu từ đầu đến cuối (Mất nhiều thời gian).\n- Chọn Cancel (Hủy): Chỉ quét 2 trang đầu tiên (Dùng để cập nhật nhanh).");
-        let maxPages = isSyncAll ? 9999 : 2;
+    btn.onclick = async () => {
+        let maxPages = await showSyncOptionsModal();
+        if (maxPages === 0) return; // User cancelled
         
-        console.log("[QLVB Sync] Bắt đầu đồng bộ từ nút nổi!");
+        console.log("[QLVB Sync] Bắt đầu đồng bộ từ nút nổi! maxPages =", maxPages);
         window._qlvbStopRequested = false;
         sessionStorage.setItem('QLVB_AUTO_CRAWL', 'true');
         sessionStorage.setItem('QLVB_API_URL', 'none');
@@ -738,6 +738,114 @@ setInterval(() => {
         }
     }
 }, 1000);
+
+// Hàm tạo Modal tùy chọn số trang
+function showSyncOptionsModal() {
+    return new Promise((resolve) => {
+        // Create modal container
+        const modal = document.createElement('div');
+        modal.id = 'qlvb-sync-modal';
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.6); z-index: 999999;
+            display: flex; align-items: center; justify-content: center;
+            font-family: Arial, sans-serif;
+        `;
+        
+        // Create modal content box
+        const box = document.createElement('div');
+        box.style.cssText = `
+            background: #fff; padding: 25px; border-radius: 12px;
+            width: 450px; max-width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            text-align: center;
+        `;
+        
+        const title = document.createElement('h3');
+        title.innerText = 'Tùy chọn Đồng bộ Văn bản';
+        title.style.cssText = 'margin-top: 0; margin-bottom: 10px; color: #1e3a8a; font-size: 20px;';
+        
+        const desc = document.createElement('p');
+        desc.innerText = 'Vui lòng chọn số trang bạn muốn quét. Quét càng nhiều trang thì càng mất nhiều thời gian.';
+        desc.style.cssText = 'margin-bottom: 20px; color: #4b5563; font-size: 14px; line-height: 1.5;';
+        
+        const btnContainer = document.createElement('div');
+        btnContainer.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;';
+        
+        const createBtn = (text, pages, isPrimary = false) => {
+            const b = document.createElement('button');
+            b.innerText = text;
+            b.style.cssText = `
+                padding: 10px 15px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;
+                background: ${isPrimary ? '#3b82f6' : '#e5e7eb'};
+                color: ${isPrimary ? '#fff' : '#374151'};
+                transition: background 0.2s;
+                font-size: 14px;
+            `;
+            b.onmouseover = () => b.style.background = isPrimary ? '#2563eb' : '#d1d5db';
+            b.onmouseout = () => b.style.background = isPrimary ? '#3b82f6' : '#e5e7eb';
+            b.onclick = () => {
+                document.body.removeChild(modal);
+                resolve(pages);
+            };
+            return b;
+        };
+        
+        btnContainer.appendChild(createBtn('1 Trang (Nhanh nhất)', 1));
+        btnContainer.appendChild(createBtn('2 Trang (Khuyên dùng)', 2));
+        btnContainer.appendChild(createBtn('3 Trang', 3));
+        btnContainer.appendChild(createBtn('Tất cả (Rất chậm)', 9999, true));
+        
+        const customContainer = document.createElement('div');
+        customContainer.style.cssText = 'display: flex; gap: 10px; margin-top: 15px; align-items: center; justify-content: center; border-top: 1px solid #e5e7eb; padding-top: 15px;';
+        
+        const customInput = document.createElement('input');
+        customInput.type = 'number';
+        customInput.min = '1';
+        customInput.placeholder = 'Số trang...';
+        customInput.style.cssText = 'padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; width: 120px; outline: none; font-size: 14px;';
+        
+        const customBtn = document.createElement('button');
+        customBtn.innerText = 'Tùy chọn';
+        customBtn.style.cssText = `
+            padding: 9px 15px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;
+            background: #10b981; color: #fff; transition: background 0.2s; font-size: 14px;
+        `;
+        customBtn.onmouseover = () => customBtn.style.background = '#059669';
+        customBtn.onmouseout = () => customBtn.style.background = '#10b981';
+        customBtn.onclick = () => {
+            const val = parseInt(customInput.value);
+            if (val > 0) {
+                document.body.removeChild(modal);
+                resolve(val);
+            } else {
+                alert("Vui lòng nhập số trang hợp lệ (lớn hơn 0)!");
+            }
+        };
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.innerText = 'Hủy bỏ';
+        closeBtn.style.cssText = `
+            margin-top: 15px; padding: 8px 15px; border: none; border-radius: 6px; cursor: pointer;
+            background: transparent; color: #ef4444; text-decoration: underline; font-size: 14px; width: 100%;
+        `;
+        closeBtn.onclick = () => {
+            document.body.removeChild(modal);
+            resolve(0); // 0 means cancel
+        };
+        
+        customContainer.appendChild(customInput);
+        customContainer.appendChild(customBtn);
+        
+        box.appendChild(title);
+        box.appendChild(desc);
+        box.appendChild(btnContainer);
+        box.appendChild(customContainer);
+        box.appendChild(closeBtn);
+        modal.appendChild(box);
+        
+        document.body.appendChild(modal);
+    });
+}
 
 } // End of window.qlvbContentScriptInjected check
 

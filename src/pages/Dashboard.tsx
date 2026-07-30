@@ -56,6 +56,12 @@ export function Dashboard() {
   const [viewTask, setViewTask] = useState<any>(null);
   const [viewDoc, setViewDoc] = useState<any>(null);
 
+  const [matrixModal, setMatrixModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    tasks: any[];
+  }>({ isOpen: false, title: '', tasks: [] });
+
   // Metrics
   const totalIncoming = incomingDocs.length;
   const totalOutgoing = outgoingDocs.length;
@@ -113,23 +119,28 @@ export function Dashboard() {
       
       const allTasks = [...leadTasks, ...coopTasks];
       
-      const inProgress = allTasks.filter((t: any) => ['Đang xử lý', 'Sắp hạn', 'Mới tiếp nhận', 'Chờ tiếp nhận', 'Xin gia hạn'].includes(t.Status)).length;
-      const overdue = allTasks.filter((t: any) => t.Status === 'Quá hạn').length;
-      const pendingApproval = allTasks.filter((t: any) => t.Status === 'Chờ duyệt').length;
-      const completed = allTasks.filter((t: any) => t.Status === 'Hoàn thành').length;
-      const total = allTasks.length;
-      const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+      const inProgressTasks = allTasks.filter((t: any) => ['Đang xử lý', 'Sắp hạn', 'Mới tiếp nhận', 'Chờ tiếp nhận', 'Xin gia hạn'].includes(t.Status));
+      const overdueTasks = allTasks.filter((t: any) => t.Status === 'Quá hạn');
+      const pendingApprovalTasks = allTasks.filter((t: any) => t.Status === 'Chờ duyệt');
+      const completedTasks = allTasks.filter((t: any) => t.Status === 'Hoàn thành');
+      const rate = allTasks.length > 0 ? Math.round((completedTasks.length / allTasks.length) * 100) : 0;
 
-      return {
         name,
         dept: s.Department || s['Phòng ban'] || 'Phòng chuyên môn',
+        leadTasks,
+        coopTasks,
+        inProgressTasks,
+        overdueTasks,
+        pendingApprovalTasks,
+        completedTasks,
+        allTasks,
         leadCount: leadTasks.length,
         coopCount: coopTasks.length,
-        inProgress,
-        overdue,
-        pendingApproval,
-        completed,
-        total,
+        inProgress: inProgressTasks.length,
+        overdue: overdueTasks.length,
+        pendingApproval: pendingApprovalTasks.length,
+        completed: completedTasks.length,
+        total: allTasks.length,
         rate
       };
     }).sort((a: any, b: any) => (b.overdue * 10 + b.inProgress) - (a.overdue * 10 + a.inProgress));
@@ -488,29 +499,29 @@ export function Dashboard() {
                     </td>
                     <td className="px-4 py-3 text-gray-500">{row.dept}</td>
                     <td className="px-4 py-3 text-center font-bold text-gray-900">
-                      <button onClick={() => navigate('/tasks', { state: { assignee: row.name } })} className="hover:underline cursor-pointer">{row.total}</button>
+                      <button onClick={() => setMatrixModal({ isOpen: true, title: `Tổng việc - ${row.name}`, tasks: row.allTasks })} className="hover:underline cursor-pointer text-gray-900 hover:text-primary">{row.total}</button>
                     </td>
                     <td className="px-4 py-3 text-center font-bold text-blue-700">
-                      <button onClick={() => navigate('/tasks', { state: { assignee: row.name, role: 'LEAD' } })} className="hover:underline cursor-pointer">{row.leadCount}</button>
+                      <button onClick={() => setMatrixModal({ isOpen: true, title: `Chủ trì - ${row.name}`, tasks: row.leadTasks })} className="hover:underline cursor-pointer hover:text-blue-900">{row.leadCount}</button>
                     </td>
                     <td className="px-4 py-3 text-center font-bold text-purple-700">
-                      <button onClick={() => navigate('/tasks', { state: { assignee: row.name, role: 'COOP' } })} className="hover:underline cursor-pointer">{row.coopCount}</button>
+                      <button onClick={() => setMatrixModal({ isOpen: true, title: `Phối hợp - ${row.name}`, tasks: row.coopTasks })} className="hover:underline cursor-pointer hover:text-purple-900">{row.coopCount}</button>
                     </td>
                     <td className="px-4 py-3 text-center font-semibold text-blue-600">
-                      <button onClick={() => navigate('/tasks', { state: { assignee: row.name, status: 'Đang xử lý' } })} className="hover:underline cursor-pointer">{row.inProgress}</button>
+                      <button onClick={() => setMatrixModal({ isOpen: true, title: `Đang làm - ${row.name}`, tasks: row.inProgressTasks })} className="hover:underline cursor-pointer hover:text-blue-800">{row.inProgress}</button>
                     </td>
                     <td className="px-4 py-3 text-center font-semibold text-amber-600">
-                      <button onClick={() => navigate('/tasks', { state: { assignee: row.name, status: 'Chờ duyệt' } })} className="hover:underline cursor-pointer">{row.pendingApproval}</button>
+                      <button onClick={() => setMatrixModal({ isOpen: true, title: `Chờ duyệt - ${row.name}`, tasks: row.pendingApprovalTasks })} className="hover:underline cursor-pointer hover:text-amber-800">{row.pendingApproval}</button>
                     </td>
                     <td className="px-4 py-3 text-center font-bold text-rose-600">
                       {row.overdue > 0 ? (
-                        <button onClick={() => navigate('/tasks', { state: { assignee: row.name, deadline: 'Quá hạn' } })} className="px-2 py-0.5 bg-rose-100 text-rose-700 rounded-md shadow-xs hover:bg-rose-200 cursor-pointer">{row.overdue}</button>
+                        <button onClick={() => setMatrixModal({ isOpen: true, title: `Quá hạn - ${row.name}`, tasks: row.overdueTasks })} className="px-2 py-0.5 bg-rose-100 text-rose-700 rounded-md shadow-xs hover:bg-rose-200 cursor-pointer">{row.overdue}</button>
                       ) : (
                         <span className="text-gray-300">0</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-center font-semibold text-emerald-600">
-                      <button onClick={() => navigate('/tasks', { state: { assignee: row.name, status: 'Hoàn thành' } })} className="hover:underline cursor-pointer">{row.completed}</button>
+                      <button onClick={() => setMatrixModal({ isOpen: true, title: `Đã xong - ${row.name}`, tasks: row.completedTasks })} className="hover:underline cursor-pointer hover:text-emerald-800">{row.completed}</button>
                     </td>
                     <td className="px-4 py-3 text-center font-bold text-gray-700">{row.rate}%</td>
                     <td className="px-4 py-3">
@@ -654,6 +665,56 @@ export function Dashboard() {
           onSubmit={async () => {}} 
         />
       )}
+
+      {/* Matrix Tasks Modal */}
+      <Modal isOpen={matrixModal.isOpen} title={matrixModal.title} onClose={() => setMatrixModal({ ...matrixModal, isOpen: false })}>
+        <div className="p-4 max-h-[80vh] overflow-y-auto">
+          {matrixModal.tasks.length > 0 ? (
+            <div className="space-y-3">
+              {matrixModal.tasks.map((t: any, idx: number) => (
+                <div key={idx} className="p-3 border rounded-xl bg-white hover:bg-gray-50 transition-colors shadow-sm relative group cursor-pointer" onClick={() => {
+                  setMatrixModal({ ...matrixModal, isOpen: false });
+                  setViewTask(t);
+                }}>
+                  <div className="flex justify-between items-start gap-4 mb-2">
+                    <h4 className="font-bold text-sm text-gray-900 group-hover:text-primary transition-colors line-clamp-2">
+                      {t.Content || t.Summary || 'Không có nội dung'}
+                    </h4>
+                    <span className={`px-2 py-1 rounded text-[11px] font-bold whitespace-nowrap flex-shrink-0 ${
+                      t.Status === 'Quá hạn' ? 'bg-rose-100 text-rose-700' :
+                      t.Status === 'Chờ duyệt' ? 'bg-amber-100 text-amber-700' :
+                      t.Status === 'Hoàn thành' ? 'bg-[#e6f4ea] text-emerald-700' :
+                      'bg-blue-100 text-blue-700'
+                    }`}>
+                      {t.Status || 'Không xác định'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
+                    <div>
+                      <span className="font-semibold text-gray-700">Mã CV: </span> {t.Task_ID}
+                    </div>
+                    <div>
+                      <span className="font-semibold text-gray-700">Hạn XL: </span> 
+                      <span className={t.Status === 'Quá hạn' ? 'text-rose-600 font-bold' : ''}>{t.Deadline || 'Không có'}</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="font-semibold text-gray-700">Nguồn việc: </span> {t.Linked_Doc_ID || 'Giao trực tiếp'}
+                    </div>
+                    <div className="col-span-2">
+                      <span className="font-semibold text-gray-700">Người giao: </span> {t.Assigner || 'Hệ thống'}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-12 text-center text-gray-500">
+              Không có công việc nào trong danh sách này.
+            </div>
+          )}
+        </div>
+      </Modal>
+
     </div>
   );
 }

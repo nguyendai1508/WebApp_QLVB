@@ -668,7 +668,7 @@ export function Dashboard() {
       )}
 
       {/* Matrix Tasks Modal */}
-      <Modal maxWidth="max-w-5xl" isOpen={matrixModal.isOpen} title={matrixModal.title} onClose={() => setMatrixModal({ ...matrixModal, isOpen: false })}>
+      <Modal maxWidth="max-w-[90vw]" isOpen={matrixModal.isOpen} title={matrixModal.title} onClose={() => setMatrixModal({ ...matrixModal, isOpen: false })}>
         <div className="p-0 max-h-[80vh] overflow-y-auto custom-scrollbar">
           {matrixModal.tasks.length > 0 ? (
             <div className="w-full">
@@ -679,6 +679,7 @@ export function Dashboard() {
                     <th className="px-4 py-3 font-bold text-gray-700 min-w-[300px] w-full">Nội dung / Trích yếu</th>
                     <th className="px-4 py-3 font-bold text-gray-700">Lĩnh vực</th>
                     <th className="px-4 py-3 font-bold text-gray-700 text-center">Độ khẩn</th>
+                    <th className="px-4 py-3 font-bold text-gray-700">Ngày giao</th>
                     <th className="px-4 py-3 font-bold text-gray-700">Người giao</th>
                     <th className="px-4 py-3 font-bold text-gray-700 text-center">Hạn xử lý</th>
                     <th className="px-4 py-3 font-bold text-gray-700 text-center">Trạng thái</th>
@@ -687,10 +688,12 @@ export function Dashboard() {
                 <tbody className="divide-y divide-gray-100">
                   {matrixModal.tasks.map((t: any, idx: number) => {
                     let displayContent = t.Content || t.Summary;
+                    let displayDate = t.Assign_Date || '';
                     if (!displayContent && t.Linked_Doc_ID) {
                       const linkedDoc = incomingDocs.find((d: any) => d.Doc_ID === t.Linked_Doc_ID || d.id === t.Linked_Doc_ID);
                       if (linkedDoc) {
                         displayContent = `[VB: ${linkedDoc.Sign_Number}] ${linkedDoc.Summary}`;
+                        if (!displayDate) displayDate = linkedDoc.Receive_Date || linkedDoc.Draft_Date || '';
                       }
                     }
 
@@ -721,12 +724,13 @@ export function Dashboard() {
                             <span className="text-gray-400 text-[10px]">-</span>
                           )}
                         </td>
+                        <td className="px-4 py-3 text-gray-600 text-xs">{displayDate || '-'}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <div className="w-5 h-5 rounded bg-gray-100 text-gray-600 flex items-center justify-center text-[10px] font-bold">
                               {(t.Assigner || 'H').charAt(0)}
                             </div>
-                            <span className="text-gray-700 font-medium">{t.Assigner || 'Hệ thống'}</span>
+                            <span className="text-gray-700 font-medium whitespace-normal max-w-[150px] line-clamp-2" title={t.Assigner}>{t.Assigner || 'Hệ thống'}</span>
                           </div>
                         </td>
                         <td className="px-4 py-3 text-center">

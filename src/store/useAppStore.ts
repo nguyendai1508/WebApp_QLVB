@@ -215,7 +215,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             Content: t.content || t.Content || t['Nội dung chỉ đạo'] || '',
             Category: t.category || t.Category || t['Lĩnh vực'] || '',
             Priority: t.priority || t.Priority || t['Độ khẩn'] || '',
-            Assigner: t.assigner || t.Assigner || t['Người giao'] || '',
+            Assigner: resolveStaffName(t.assigner || t.Assigner || t['Người giao'] || ''),
             Lead_Department: t.leadDepartment || t.Lead_Department || t['Phòng ban chủ trì'] || '',
             Lead_Assignee: resolveStaffName(t.leadAssignee || t.Lead_Assignee || t.Assignee_ID || t['Người chủ trì'] || ''),
             Co_Assignee: resolveStaffName(t.coAssignee || t.Co_Assignee || t.Co_Assignees || t['Người phối hợp'] || ''),

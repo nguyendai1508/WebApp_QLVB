@@ -103,12 +103,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                             }
                         }
                     } else {
-                        // Theo yêu cầu: KHÔNG dò bằng chuẩn mã Unicode của Họ tên nữa vì không chuẩn.
-                        // Nếu không lấy được Username thì báo lỗi thẳng ra màn hình.
-                        throw new Error(`KHÔNG THỂ LẤY USERNAME TỪ: "${nameRaw}". Vui lòng kiểm tra lại trên VNPT!`);
+                        // Không có Username, dò tìm bằng Tên
+                        const matchedUsers = usersList.filter(u => (u.fullName || '').trim() === cleanName || (u['Tên người dùng'] || '').trim() === cleanName);
+                        if (matchedUsers.length === 1) {
+                            const staffIdToFind = matchedUsers[0].staffId || matchedUsers[0]['Mã cán bộ'];
+                            const existingStaff = staffList.find(s => s.Staff_ID === staffIdToFind || s.id === staffIdToFind);
+                            if (existingStaff) return existingStaff.id;
+                        } else if (matchedUsers.length > 1) {
+                            throw new Error(`KHÔNG THỂ PHÂN BIỆT: Có nhiều người tên "${cleanName}". VNPT không cung cấp Username cho người này!`);
+                        }
+                        // Không có ai trùng tên -> Tự tạo username
+                        explicitUsername = generateUsername(cleanName);
                     }
                     
-                    // Nếu chưa có (Nhưng ĐÃ lấy được Username) -> Tự động tạo Cán bộ và Người dùng
+                    // Nếu chưa có -> Tự động tạo Cán bộ và Người dùng
                     const newStaffId = `AUTO-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
                     const username = explicitUsername;
                     

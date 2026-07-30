@@ -46,7 +46,24 @@ export function UserForm({ initialData, onCancel, onSubmit }: UserFormProps) {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await onSubmit(formData);
+      const finalPayload = {
+        username: formData.username,
+        'Tên đăng nhập': formData.username,
+        password: formData.password || (initialData ? initialData['Mật khẩu'] : '123456'),
+        'Mật khẩu': formData.password || (initialData ? initialData['Mật khẩu'] : '123456'),
+        staffId: formData.staffId,
+        'Mã cán bộ': formData.staffId,
+        'Mã người dùng': formData.staffId, // Thường dùng chung mã cán bộ cho mã người dùng
+        fullName: formData.fullName,
+        'Họ tên cán bộ': formData.fullName,
+        displayName: formData.displayName,
+        'Tên người dùng': formData.displayName,
+        dataScope: formData.dataScope,
+        'Phạm vi dữ liệu': formData.dataScope,
+        role: formData.role,
+        'Phân quyền': formData.role
+      };
+      await onSubmit(finalPayload);
     } finally {
       setIsSubmitting(false);
     }

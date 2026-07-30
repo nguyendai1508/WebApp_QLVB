@@ -5,10 +5,12 @@ export function usePermissions() {
   
   const role = user?.Role || user?.role || user?.['Phân quyền'] || user?.['Quyền hạn'] || 'Chuyên viên'; // Default to Admin for dev/testing if null
 
-  const isAdmin = role === 'Admin';
-  const isVanThu = role === 'Văn thư';
-  const isLanhDao = role === 'Lãnh đạo';
-  const isChuyenVien = role === 'Chuyên viên';
+  const roleName = (role || 'Chuyên viên').toString().toLowerCase().trim();
+
+  const isAdmin = roleName === 'admin' || roleName === 'quản trị viên';
+  const isVanThu = roleName === 'văn thư';
+  const isLanhDao = roleName === 'lãnh đạo';
+  const isChuyenVien = roleName === 'chuyên viên' || roleName === 'nghiệp vụ';
 
   return {
     isAdmin,

@@ -377,37 +377,60 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                         
                                         let allCoAssignees = [];
                                         
+                                        let targetRow = null;
+                                        
+                                        // Vòng 1: Tìm ưu tiên dòng của Lê Tiến Lâm
                                         for (const tr of rows) {
                                             const pTags = tr.querySelectorAll('td[link_param] p');
-                                            let foundAssignment = false;
-                                            
+                                            let hasAssignment = Array.from(pTags).some(p => {
+                                                const txt = p.textContent.trim();
+                                                return txt.startsWith("Chuyển tới:") || txt.startsWith("Đồng xử lý:");
+                                            });
+                                            if (hasAssignment) {
+                                                const userSpan = tr.querySelector('.log_user_xuly');
+                                                if (userSpan && userSpan.textContent.toLowerCase().includes("lâm")) {
+                                                    targetRow = tr;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        
+                                        // Nếu không tìm thấy dòng của Lê Tiến Lâm, lấy dòng phân công mới nhất
+                                        if (!targetRow) {
+                                            for (const tr of rows) {
+                                                const pTags = tr.querySelectorAll('td[link_param] p');
+                                                let hasAssignment = Array.from(pTags).some(p => {
+                                                    const txt = p.textContent.trim();
+                                                    return txt.startsWith("Chuyển tới:") || txt.startsWith("Đồng xử lý:");
+                                                });
+                                                if (hasAssignment) {
+                                                    targetRow = tr;
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        if (targetRow) {
+                                            const pTags = targetRow.querySelectorAll('td[link_param] p');
                                             pTags.forEach(p => {
                                                 const pText = p.textContent.trim();
-                                                
                                                 if (pText.startsWith("Chuyển tới:")) {
                                                     const leadStr = pText.replace("Chuyển tới:", "").trim();
                                                     leadAssigneeLog = leadStr.replace(/\.$/, '');
-                                                    foundAssignment = true;
                                                 }
-                                                
                                                 if (pText.startsWith("Đồng xử lý:")) {
                                                     const coopStr = pText.replace("Đồng xử lý:", "").trim();
                                                     const cleanCoop = coopStr.replace(/\.$/, '');
                                                     const arr = cleanCoop.split(/,\s*|(?<=\))\s*\.\s*/).map(s => s.trim()).filter(s => s !== '');
                                                     allCoAssignees = allCoAssignees.concat(arr);
-                                                    foundAssignment = true;
                                                 }
                                             });
                                             
-                                            // Lấy thông tin phân công ở dòng mới nhất (gần nhất) rồi dừng lại, không quét các dòng lịch sử cũ
-                                            if (foundAssignment) {
-                                                const userSpan = tr.querySelector('.log_user_xuly');
-                                                if (userSpan) {
-                                                    assignerLog = userSpan.textContent.trim();
-                                                }
-                                                assignDateLog = tr.getAttribute('daxl_date') || '';
-                                                break;
+                                            const userSpan = targetRow.querySelector('.log_user_xuly');
+                                            if (userSpan) {
+                                                assignerLog = userSpan.textContent.trim();
                                             }
+                                            assignDateLog = targetRow.getAttribute('daxl_date') || '';
                                         }
                                         
                                         // Lọc bỏ các giá trị trùng lặp

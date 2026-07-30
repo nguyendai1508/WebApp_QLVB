@@ -896,34 +896,58 @@ export function TaskForm({ initialData, autoFillFromDoc, isReadOnly, onSubmit, o
             <p className="text-[11px] text-rose-500 font-medium mb-3 italic">* Bình luận mới đã tạm ghi nhận. Vui lòng nhấn nút "Lưu tiến độ" ở dưới cùng để lưu vĩnh viễn vào hệ thống.</p>
           )}
           
-          <div className="bg-gray-50 border rounded-xl p-4 max-h-60 overflow-y-auto custom-scrollbar">
-            <div className="space-y-4 relative">
-              <div className="absolute left-1 top-2 bottom-2 w-px bg-gray-200 z-0"></div>
+          <div className="bg-gray-50/50 border rounded-2xl p-4 max-h-[400px] overflow-y-auto custom-scrollbar flex flex-col gap-4 shadow-inner">
               {[...pendingComments, ...((initialData.Audit_Trail || initialData.auditLog || '').split('\n\n').filter(Boolean))].map((log: string, index: number, arr: any[]) => {
                 const firstBracketIndex = log.indexOf('] ');
                 let timeStr = '';
                 let content = log;
                 if (firstBracketIndex !== -1 && log.startsWith('[')) {
-                  timeStr = log.substring(0, firstBracketIndex + 1);
+                  timeStr = log.substring(1, firstBracketIndex); // Get "30/07/2026, 10:02:19" without brackets
                   content = log.substring(firstBracketIndex + 2);
                 }
                 const isComment = content.includes('💬');
+                
+                if (isComment) {
+                   const commentMatch = content.match(/💬 (.*?) đã thảo luận:\n([\s\S]*)/);
+                   const author = commentMatch ? commentMatch[1] : 'Người dùng';
+                   const message = commentMatch ? commentMatch[2] : content;
+                   const isMe = author === user?.FullName;
+                   
+                   return (
+                     <div key={index} className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`flex flex-col gap-1 max-w-[85%] ${isMe ? 'items-end' : 'items-start'}`}>
+                           <div className="flex items-baseline gap-2 px-1">
+                              <span className="text-xs font-bold text-gray-700">{isMe ? 'Tôi' : author}</span>
+                              <span className="text-[10px] text-gray-400 font-medium">{timeStr}</span>
+                           </div>
+                           <div className={`px-4 py-2.5 rounded-2xl text-sm shadow-sm whitespace-pre-wrap leading-relaxed ${
+                             isMe 
+                              ? 'bg-emerald-600 text-white rounded-tr-sm' 
+                              : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm'
+                           }`}>
+                             {message}
+                           </div>
+                        </div>
+                     </div>
+                   );
+                }
+
+                // System Log rendering
                 return (
-                  <div key={index} className="flex gap-3 text-sm relative z-10">
-                    <div className="flex flex-col items-center mt-1 bg-gray-50 pb-2">
-                      <div className={`w-2 h-2 rounded-full ${isComment ? 'bg-amber-500' : 'bg-primary'} flex-shrink-0 shadow-sm border border-white`}></div>
-                    </div>
-                    <div className={`flex-1 pb-2 whitespace-pre-wrap ${isComment ? 'text-amber-700 font-medium' : 'text-gray-600'}`}>
-                      {timeStr && <span className={`font-semibold mr-2 ${isComment ? 'text-amber-800' : 'text-gray-800'}`}>{timeStr}</span>}
-                      {content}
-                    </div>
+                  <div key={index} className="flex justify-center w-full my-1">
+                     <div className="bg-gray-100/80 px-3 py-1.5 rounded-full flex items-center gap-2 max-w-[90%] border border-gray-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0"></span>
+                        <span className="text-xs text-gray-500 font-medium whitespace-pre-wrap text-center leading-snug">
+                           {timeStr ? <span className="font-bold mr-1">{timeStr}</span> : null}
+                           {content}
+                        </span>
+                     </div>
                   </div>
                 );
               })}
-              {!initialData.History && pendingComments.length === 0 && (
-                <div className="text-gray-400 italic text-sm ml-4">Chưa có nhật ký hay thảo luận nào.</div>
+              {!(initialData.Audit_Trail || initialData.auditLog) && pendingComments.length === 0 && (
+                <div className="text-gray-400 italic text-sm text-center py-8">Chưa có nhật ký hay thảo luận nào.</div>
               )}
-            </div>
           </div>
         </div>
       )}
